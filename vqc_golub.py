@@ -12,7 +12,7 @@ from qiskit_machine_learning.algorithms.classifiers import NeuralNetworkClassifi
 from qiskit_machine_learning.neural_networks import EstimatorQNN
 from qiskit_algorithms.optimizers import COBYLA
 
-from encodings.angle_encoding import angle_encoding_circuit
+from angle_encoding import angle_encoding_circuit
 
 
 def scale_to_angle(X: np.ndarray):
