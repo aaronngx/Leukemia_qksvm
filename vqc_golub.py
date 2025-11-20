@@ -7,12 +7,17 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 
 from qiskit.circuit.library import TwoLocal
-from qiskit.primitives import Estimator
 from qiskit_machine_learning.algorithms.classifiers import NeuralNetworkClassifier
 from qiskit_machine_learning.neural_networks import EstimatorQNN
 from qiskit_algorithms.optimizers import COBYLA
 
 from angle_encoding import angle_encoding_circuit
+from backend_config import (
+    BackendType,
+    get_estimator_for_backend,
+    get_backend_info,
+    print_backend_recommendation,
+)
 
 
 def scale_to_angle(X: np.ndarray):
@@ -65,8 +70,30 @@ def train_eval_vqc(
     reps: int = 2,
     test_size: float = 0.3,
     seed: int = 42,
+    output_dir: str = "results_vqc",
+    backend_type: BackendType = BackendType.STATEVECTOR,
+    max_bond_dimension: int = 100,
+    max_iter: int = 200,
 ):
-    """Train and evaluate VQC classifier on Golub data."""
+    """Train and evaluate VQC classifier."""
+    # Print backend info
+    n_features = X.shape[1]
+    backend_info = get_backend_info(backend_type, n_features)
+    print("\n" + "="*70)
+    print("VARIATIONAL QUANTUM CLASSIFIER - CONFIGURATION")
+    print("="*70)
+    print(f"Backend: {backend_type.value}")
+    print(f"Number of qubits: {n_features}")
+    print(f"Ansatz repetitions: {reps}")
+    print(f"State dimension: {backend_info['state_dimension']:,}")
+    if isinstance(backend_info['memory_required_gb'], float):
+        print(f"Memory required: {backend_info['memory_required_gb']:.2f} GB")
+    print(f"Exact simulation: {backend_info['exact_simulation']}")
+    if backend_type == BackendType.TENSOR_NETWORK:
+        print(f"Max bond dimension: {max_bond_dimension}")
+    print(f"Max iterations: {max_iter}")
+    print("="*70 + "\n")
+
     X_scaled, _ = scale_to_angle(X)
 
     X_train, X_val, y_train, y_val = train_test_split(
@@ -77,20 +104,26 @@ def train_eval_vqc(
         stratify=y,
     )
 
-    n_features = X_train.shape[1]
     circuit, x_params, w_params = build_vqc(n_features, reps=reps)
 
-    estimator = Estimator()
+    print(f"[INFO] Initializing {backend_type.value} backend...")
+    estimator = get_estimator_for_backend(backend_type, max_bond_dimension)
+
+    print("[INFO] Building quantum neural network...")
     qnn = EstimatorQNN(
         circuit=circuit,
         input_params=x_params,
         weight_params=w_params,
+        estimator=estimator,
     )
 
-    optimizer = COBYLA(maxiter=200)
+    optimizer = COBYLA(maxiter=max_iter)
     clf = NeuralNetworkClassifier(qnn, optimizer=optimizer)
 
+    print(f"[INFO] Training VQC (max {max_iter} iterations)...")
     clf.fit(X_train, y_train)
+
+    print("[INFO] Evaluating on validation set...")
     y_pred = clf.predict(X_val)
 
     acc = accuracy_score(y_val, y_pred)
@@ -112,6 +145,7 @@ def train_eval_vqc(
     if ind_data is not None and ind_data[0] is not None:
         X_ind, y_ind = ind_data
         X_ind_scaled, _ = scale_to_angle(X_ind)
+        print("[INFO] Evaluating on independent test set...")
         y_ind_pred = clf.predict(X_ind_scaled)
         ind_acc = accuracy_score(y_ind, y_ind_pred)
         print("\n=== VQC (independent set) ===")
@@ -122,27 +156,82 @@ def train_eval_vqc(
 
 
 def main():
-    parser = argparse.ArgumentParser(description="VQC classifier on Golub dataset (angle encoding).")
+    parser = argparse.ArgumentParser(description="VQC with flexible backend support.")
     parser.add_argument(
         "--train_csv",
         default="data/processed/train_topk_snr.csv",
-        help="Path to processed train CSV (SNR-selected).",
+        help="Path to processed train CSV",
     )
     parser.add_argument(
         "--ind_csv",
         default="data/processed/independent_topk_snr.csv",
-        help="Path to processed independent CSV (SNR-selected).",
+        help="Path to processed independent CSV",
+    )
+    parser.add_argument(
+        "--output_dir",
+        default="results_vqc",
+        help="Directory to save results",
     )
     parser.add_argument(
         "--reps",
         type=int,
         default=2,
-        help="TwoLocal reps (circuit depth).",
+        help="TwoLocal ansatz repetitions (circuit depth)",
+    )
+    parser.add_argument(
+        "--max_iter",
+        type=int,
+        default=200,
+        help="Maximum optimizer iterations",
+    )
+    parser.add_argument(
+        "--backend",
+        choices=['statevector', 'tensor_network'],
+        default='statevector',
+        help="Backend type for simulation",
+    )
+    parser.add_argument(
+        "--max_bond_dimension",
+        type=int,
+        default=100,
+        help="Maximum bond dimension for tensor network backend",
+    )
+    parser.add_argument(
+        "--recommend_backend",
+        action="store_true",
+        help="Print backend recommendation and exit",
+    )
+    parser.add_argument(
+        "--available_memory",
+        type=float,
+        default=16.0,
+        help="Available RAM in GB (for recommendation)",
     )
     args = parser.parse_args()
 
+    # Load data
     (X_train, y_train), (X_ind, y_ind) = load_processed(args.train_csv, args.ind_csv)
-    train_eval_vqc(X_train, y_train, ind_data=(X_ind, y_ind), reps=args.reps)
+
+    if args.recommend_backend:
+        print_backend_recommendation(X_train.shape[1], args.available_memory)
+        return
+
+    # Map string to BackendType
+    backend_map = {
+        'statevector': BackendType.STATEVECTOR,
+        'tensor_network': BackendType.TENSOR_NETWORK,
+    }
+    backend_type = backend_map[args.backend]
+
+    train_eval_vqc(
+        X_train, y_train,
+        ind_data=(X_ind, y_ind),
+        reps=args.reps,
+        output_dir=args.output_dir,
+        backend_type=backend_type,
+        max_bond_dimension=args.max_bond_dimension,
+        max_iter=args.max_iter,
+    )
 
 
 if __name__ == "__main__":

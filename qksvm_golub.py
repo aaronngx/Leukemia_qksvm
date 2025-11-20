@@ -12,9 +12,15 @@ from sklearn.svm import SVC
 import joblib
 
 from qiskit import QuantumCircuit
-from qiskit.quantum_info import Statevector
 
 from angle_encoding import angle_encoding_circuit
+from backend_config import (
+    BackendType,
+    compute_kernel_element_statevector,
+    compute_kernel_element_tensor_network,
+    get_backend_info,
+    print_backend_recommendation,
+)
 
 
 def scale_to_angle(X: np.ndarray):
@@ -45,15 +51,30 @@ def build_kernel(
     XB: np.ndarray,
     feature_map: QuantumCircuit,
     x_params,
+    backend_type: BackendType = BackendType.STATEVECTOR,
+    max_bond_dimension: int = 100,
+    verbose: bool = True,
 ):
     """
-    Build kernel matrix K where K[i, j] = |<φ(x_i)|φ(x_j)>|^2
-    using angle encoding and U(x) U(z)† on a statevector simulator.
+    Build kernel matrix K where K[i, j] = |<φ(x_i)|φ(x_j)>|^2.
+
+    Supports multiple backends: statevector, aer_statevector, or tensor_network (MPS).
     """
     n_qubits = feature_map.num_qubits
     K = np.zeros((len(XA), len(XB)))
 
+    total_elements = len(XA) * len(XB)
+    if verbose:
+        print(f"[INFO] Computing {len(XA)} x {len(XB)} = {total_elements} kernel elements...")
+        print(f"[INFO] Backend: {backend_type.value}")
+        if backend_type == BackendType.TENSOR_NETWORK:
+            print(f"[INFO] Max bond dimension: {max_bond_dimension}")
+
     for i, x in enumerate(XA):
+        if verbose and (i % 5 == 0 or i == len(XA) - 1):
+            progress = ((i + 1) * len(XB)) / total_elements * 100
+            print(f"  Progress: {i+1}/{len(XA)} rows ({progress:.1f}%)")
+
         for j, z in enumerate(XB):
             qc = QuantumCircuit(n_qubits)
 
@@ -65,9 +86,16 @@ def build_kernel(
             bind_z = {x_params[k]: float(z[k]) for k in range(n_qubits)}
             qc.compose(feature_map.assign_parameters(bind_z).inverse(), inplace=True)
 
-            # Use Statevector to compute the kernel value
-            sv = Statevector.from_instruction(qc)
-            K[i, j] = float(np.abs(sv[0]) ** 2)  # prob(|0...0>)
+            # Compute kernel element based on backend
+            if backend_type == BackendType.STATEVECTOR:
+                K[i, j] = compute_kernel_element_statevector(qc)
+            elif backend_type == BackendType.TENSOR_NETWORK:
+                K[i, j] = compute_kernel_element_tensor_network(qc, max_bond_dimension)
+            else:
+                raise ValueError(f"Unknown backend type: {backend_type}")
+
+    if verbose:
+        print(f"[INFO] Kernel computation complete.")
 
     return K
 
@@ -79,6 +107,8 @@ def train_eval_qksvm(
     test_size: float = 0.3,
     seed: int = 42,
     output_dir: str = "results",
+    backend_type: BackendType = BackendType.STATEVECTOR,
+    max_bond_dimension: int = 100,
 ):
     """Train and evaluate QKSVM with angle-encoding quantum kernel."""
     # Create output directory
@@ -86,6 +116,22 @@ def train_eval_qksvm(
     out_path.mkdir(parents=True, exist_ok=True)
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    # Print backend info
+    n_features = X.shape[1]
+    backend_info = get_backend_info(backend_type, n_features)
+    print("\n" + "="*70)
+    print("QUANTUM KERNEL SVM - CONFIGURATION")
+    print("="*70)
+    print(f"Backend: {backend_type.value}")
+    print(f"Number of qubits: {n_features}")
+    print(f"State dimension: {backend_info['state_dimension']:,}")
+    if isinstance(backend_info['memory_required_gb'], float):
+        print(f"Memory required: {backend_info['memory_required_gb']:.2f} GB")
+    print(f"Exact simulation: {backend_info['exact_simulation']}")
+    if backend_type == BackendType.TENSOR_NETWORK:
+        print(f"Max bond dimension: {max_bond_dimension}")
+    print("="*70 + "\n")
 
     X_scaled, _ = scale_to_angle(X)
 
@@ -96,8 +142,6 @@ def train_eval_qksvm(
         random_state=seed,
         stratify=y,
     )
-
-    n_features = X_train.shape[1]
 
     feature_map, x_params = angle_encoding_circuit(n_features)
 
@@ -112,17 +156,34 @@ def train_eval_qksvm(
         f.write(str(feature_map.draw(output='text')))
 
     print("[INFO] Building training kernel...")
-    K_train = build_kernel(X_train, X_train, feature_map, x_params)
+    K_train = build_kernel(
+        X_train, X_train, feature_map, x_params,
+        backend_type=backend_type,
+        max_bond_dimension=max_bond_dimension,
+    )
 
     clf = SVC(kernel="precomputed", C=1.0)
     clf.fit(K_train, y_train)
 
     # Save trained model
     print("[INFO] Saving trained model...")
-    joblib.dump(clf, out_path / f"qksvm_model_{timestamp}.pkl")
+    model_data = {
+        'classifier': clf,
+        'X_train': X_train,
+        'feature_map': feature_map,
+        'x_params': x_params,
+        'backend_type': backend_type.value,
+        'max_bond_dimension': max_bond_dimension,
+        'n_features': n_features,
+    }
+    joblib.dump(model_data, out_path / f"qksvm_model_{timestamp}.pkl")
 
     print("[INFO] Building validation kernel...")
-    K_val = build_kernel(X_val, X_train, feature_map, x_params)
+    K_val = build_kernel(
+        X_val, X_train, feature_map, x_params,
+        backend_type=backend_type,
+        max_bond_dimension=max_bond_dimension,
+    )
     y_pred = clf.predict(K_val)
 
     acc = accuracy_score(y_val, y_pred)
@@ -145,7 +206,13 @@ def train_eval_qksvm(
     results_text.append("QUANTUM KERNEL SVM (QKSVM) RESULTS")
     results_text.append("="*60)
     results_text.append(f"\nTimestamp: {timestamp}")
-    results_text.append(f"Number of features: {n_features}")
+    results_text.append(f"Backend: {backend_type.value}")
+    results_text.append(f"Number of qubits/features: {n_features}")
+    if backend_type == BackendType.TENSOR_NETWORK:
+        results_text.append(f"Max bond dimension: {max_bond_dimension}")
+        results_text.append("Simulation type: Approximate (Tensor Network)")
+    else:
+        results_text.append("Simulation type: Exact (Statevector)")
     results_text.append(f"Training samples: {len(X_train)}")
     results_text.append(f"Validation samples: {len(X_val)}")
     results_text.append(f"\n{'='*60}")
@@ -159,7 +226,11 @@ def train_eval_qksvm(
         X_ind, y_ind = ind_data
         X_ind_scaled, _ = scale_to_angle(X_ind)
         print("[INFO] Building independent-set kernel...")
-        K_ind = build_kernel(X_ind_scaled, X_train, feature_map, x_params)
+        K_ind = build_kernel(
+            X_ind_scaled, X_train, feature_map, x_params,
+            backend_type=backend_type,
+            max_bond_dimension=max_bond_dimension,
+        )
         y_ind_pred = clf.predict(K_ind)
         ind_acc = accuracy_score(y_ind, y_ind_pred)
         ind_report = classification_report(y_ind, y_ind_pred, digits=4)
@@ -198,26 +269,68 @@ def train_eval_qksvm(
 
 
 def main():
-    parser = argparse.ArgumentParser(description="QKSVM (angle-encoding kernel) on Golub dataset.")
+    parser = argparse.ArgumentParser(description="QKSVM with flexible backend support.")
     parser.add_argument(
         "--train_csv",
         default="data/processed/train_topk_snr.csv",
-        help="Path to processed train CSV (SNR-selected).",
+        help="Path to processed train CSV",
     )
     parser.add_argument(
         "--ind_csv",
         default="data/processed/independent_topk_snr.csv",
-        help="Path to processed independent CSV (SNR-selected).",
+        help="Path to processed independent CSV",
     )
     parser.add_argument(
         "--output_dir",
         default="results",
-        help="Directory to save results.",
+        help="Directory to save results",
+    )
+    parser.add_argument(
+        "--backend",
+        choices=['statevector', 'tensor_network'],
+        default='statevector',
+        help="Backend type for simulation",
+    )
+    parser.add_argument(
+        "--max_bond_dimension",
+        type=int,
+        default=100,
+        help="Maximum bond dimension for tensor network backend (typical: 50-500)",
+    )
+    parser.add_argument(
+        "--recommend_backend",
+        action="store_true",
+        help="Print backend recommendation and exit",
+    )
+    parser.add_argument(
+        "--available_memory",
+        type=float,
+        default=16.0,
+        help="Available RAM in GB (for recommendation)",
     )
     args = parser.parse_args()
 
+    # Load data
     (X_train, y_train), (X_ind, y_ind) = load_processed(args.train_csv, args.ind_csv)
-    train_eval_qksvm(X_train, y_train, ind_data=(X_ind, y_ind), output_dir=args.output_dir)
+
+    if args.recommend_backend:
+        print_backend_recommendation(X_train.shape[1], args.available_memory)
+        return
+
+    # Map string to BackendType
+    backend_map = {
+        'statevector': BackendType.STATEVECTOR,
+        'tensor_network': BackendType.TENSOR_NETWORK,
+    }
+    backend_type = backend_map[args.backend]
+
+    train_eval_qksvm(
+        X_train, y_train,
+        ind_data=(X_ind, y_ind),
+        output_dir=args.output_dir,
+        backend_type=backend_type,
+        max_bond_dimension=args.max_bond_dimension,
+    )
 
 
 if __name__ == "__main__":
