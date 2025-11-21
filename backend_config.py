@@ -1,10 +1,4 @@
-"""Backend configuration for quantum simulations.
-
-Supports both exact statevector simulation and tensor network simulation (MPS)
-for scaling to larger qubit counts.
-"""
 from enum import Enum
-from typing import Any
 
 import numpy as np
 from qiskit import QuantumCircuit

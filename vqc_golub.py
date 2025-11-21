@@ -1,5 +1,3 @@
-import argparse
-
 import numpy as np
 import pandas as pd
 from sklearn.metrics import accuracy_score, classification_report, roc_auc_score
@@ -9,14 +7,13 @@ from sklearn.preprocessing import MinMaxScaler
 from qiskit.circuit.library import TwoLocal
 from qiskit_machine_learning.algorithms.classifiers import NeuralNetworkClassifier
 from qiskit_machine_learning.neural_networks import EstimatorQNN
-from qiskit_algorithms.optimizers import COBYLA
+from qiskit_algorithms.optimizers import COBYLA, SPSA, ADAM
 
 from angle_encoding import angle_encoding_circuit
 from backend_config import (
     BackendType,
-    get_estimator_for_backend,
     get_backend_info,
-    print_backend_recommendation,
+    get_estimator_for_backend,
 )
 
 
@@ -28,7 +25,13 @@ def scale_to_angle(X: np.ndarray):
 
 
 def load_processed(train_csv: str, test_csv: str | None = None):
-    """Load SNR-processed CSVs."""
+    """
+    Load processed CSVs in (features + 'label') format.
+
+    Returns
+    -------
+    (X_train, y_train), (X_test, y_test)
+    """
     df_train = pd.read_csv(train_csv)
     y_train = df_train["label"].values
     X_train = df_train.drop(columns=["label"]).values
@@ -44,7 +47,15 @@ def load_processed(train_csv: str, test_csv: str | None = None):
 
 
 def build_vqc(num_features: int, reps: int = 2):
-    """Build VQC: angle encoding + TwoLocal ansatz."""
+    """
+    Build VQC circuit: angle encoding + TwoLocal ansatz.
+
+    Returns
+    -------
+    qc        : QuantumCircuit for U(x, θ)
+    x_params  : list of feature parameters
+    w_params  : list of trainable parameters
+    """
     feature_map, x_params = angle_encoding_circuit(num_features)
     ansatz = TwoLocal(
         num_qubits=num_features,
@@ -63,6 +74,27 @@ def build_vqc(num_features: int, reps: int = 2):
     return qc, list(x_params), list(ansatz.parameters)
 
 
+def make_optimizer(name: str, max_iter: int = 200):
+    """
+    Create an optimizer by name.
+
+    Supported:
+      - 'COBYLA'
+      - 'SPSA'
+      - 'ADAM'
+    """
+    name = name.lower()
+    if name == "cobyla":
+        return COBYLA(maxiter=max_iter)
+    if name == "spsa":
+        # SPSA is stochastic; this is a reasonable default
+        return SPSA(maxiter=max_iter)
+    if name == "adam":
+        # ADAM supports many hyperparams; keep defaults except maxiter
+        return ADAM(maxiter=max_iter)
+    raise ValueError(f"Unknown optimizer name: {name}. Use 'COBYLA', 'SPSA', or 'ADAM'.")
+
+
 def train_eval_vqc(
     X: np.ndarray,
     y: np.ndarray,
@@ -70,32 +102,59 @@ def train_eval_vqc(
     reps: int = 2,
     test_size: float = 0.3,
     seed: int = 42,
-    output_dir: str = "results_vqc",
+    output_dir: str = "results_vqc",  # placeholder for future saving
     backend_type: BackendType = BackendType.STATEVECTOR,
     max_bond_dimension: int = 100,
     max_iter: int = 200,
+    optimizer_name: str = "COBYLA",
 ):
-    """Train and evaluate VQC classifier."""
-    # Print backend info
+    """
+    Train and evaluate a Variational Quantum Classifier (VQC).
+
+    Parameters
+    ----------
+    X, y : np.ndarray
+        Features and labels.
+    ind_data : (X_ind, y_ind) or None
+        Independent test set (optional).
+    reps : int
+        Number of TwoLocal repetitions.
+    test_size : float
+        Validation split fraction.
+    seed : int
+        Random seed for train/validation split.
+    output_dir : str
+        Currently unused (placeholder for future saving).
+    backend_type : BackendType
+        STATEVECTOR or TENSOR_NETWORK.
+    max_bond_dimension : int
+        For TENSOR_NETWORK backend.
+    max_iter : int
+        Max optimizer iterations.
+    optimizer_name : str
+        'COBYLA', 'SPSA', or 'ADAM'.
+    """
     n_features = X.shape[1]
     backend_info = get_backend_info(backend_type, n_features)
-    print("\n" + "="*70)
+
+    print("\n" + "=" * 70)
     print("VARIATIONAL QUANTUM CLASSIFIER - CONFIGURATION")
-    print("="*70)
+    print("=" * 70)
     print(f"Backend: {backend_type.value}")
-    print(f"Number of qubits: {n_features}")
+    print(f"Number of qubits / features: {n_features}")
     print(f"Ansatz repetitions: {reps}")
+    print(f"Optimizer: {optimizer_name.upper()}")
+    print(f"Max iterations: {max_iter}")
     print(f"State dimension: {backend_info['state_dimension']:,}")
-    if isinstance(backend_info['memory_required_gb'], float):
-        print(f"Memory required: {backend_info['memory_required_gb']:.2f} GB")
+    if isinstance(backend_info["memory_required_gb"], float):
+        print(f"Approx. statevector memory (GB): {backend_info['memory_required_gb']:.2f}")
     print(f"Exact simulation: {backend_info['exact_simulation']}")
     if backend_type == BackendType.TENSOR_NETWORK:
         print(f"Max bond dimension: {max_bond_dimension}")
-    print(f"Max iterations: {max_iter}")
-    print("="*70 + "\n")
+    print("=" * 70 + "\n")
 
+    # Scale and split
     X_scaled, _ = scale_to_angle(X)
-
     X_train, X_val, y_train, y_val = train_test_split(
         X_scaled,
         y,
@@ -104,8 +163,10 @@ def train_eval_vqc(
         stratify=y,
     )
 
+    # Build VQC circuit
     circuit, x_params, w_params = build_vqc(n_features, reps=reps)
 
+    # Backend-specific Estimator
     print(f"[INFO] Initializing {backend_type.value} backend...")
     estimator = get_estimator_for_backend(backend_type, max_bond_dimension)
 
@@ -117,22 +178,21 @@ def train_eval_vqc(
         estimator=estimator,
     )
 
-    optimizer = COBYLA(maxiter=max_iter)
+    optimizer = make_optimizer(optimizer_name, max_iter=max_iter)
     clf = NeuralNetworkClassifier(qnn, optimizer=optimizer)
 
-    print(f"[INFO] Training VQC (max {max_iter} iterations)...")
+    print(f"[INFO] Training VQC with {optimizer_name.upper()} (max {max_iter} iterations)...")
     clf.fit(X_train, y_train)
 
     print("[INFO] Evaluating on validation set...")
-    y_pred = clf.predict(X_val)
+    y_val_pred = clf.predict(X_val)
 
-    acc = accuracy_score(y_val, y_pred)
+    val_acc = accuracy_score(y_val, y_val_pred)
     print("\n=== VQC (validation) ===")
-    print("Accuracy:", round(acc, 4))
-    print(classification_report(y_val, y_pred, digits=4))
+    print("Accuracy:", round(val_acc, 4))
+    print(classification_report(y_val, y_val_pred, digits=4))
 
-    # Optional ROC-AUC if probabilities are available
-    auc = None
+    # Optional ROC-AUC
     if hasattr(clf, "predict_proba"):
         try:
             y_proba = clf.predict_proba(X_val)[:, 1]
@@ -141,7 +201,7 @@ def train_eval_vqc(
         except Exception:
             pass
 
-    # Evaluate on independent set if provided
+    # Independent test set (optional)
     if ind_data is not None and ind_data[0] is not None:
         X_ind, y_ind = ind_data
         X_ind_scaled, _ = scale_to_angle(X_ind)
@@ -152,87 +212,52 @@ def train_eval_vqc(
         print("Accuracy:", round(ind_acc, 4))
         print(classification_report(y_ind, y_ind_pred, digits=4))
 
-    return circuit
+    return circuit, clf
 
 
-def main():
-    parser = argparse.ArgumentParser(description="VQC with flexible backend support.")
-    parser.add_argument(
-        "--train_csv",
-        default="data/processed/train_topk_snr.csv",
-        help="Path to processed train CSV",
-    )
-    parser.add_argument(
-        "--ind_csv",
-        default="data/processed/independent_topk_snr.csv",
-        help="Path to processed independent CSV",
-    )
-    parser.add_argument(
-        "--output_dir",
-        default="results_vqc",
-        help="Directory to save results",
-    )
-    parser.add_argument(
-        "--reps",
-        type=int,
-        default=2,
-        help="TwoLocal ansatz repetitions (circuit depth)",
-    )
-    parser.add_argument(
-        "--max_iter",
-        type=int,
-        default=200,
-        help="Maximum optimizer iterations",
-    )
-    parser.add_argument(
-        "--backend",
-        choices=['statevector', 'tensor_network'],
-        default='statevector',
-        help="Backend type for simulation",
-    )
-    parser.add_argument(
-        "--max_bond_dimension",
-        type=int,
-        default=100,
-        help="Maximum bond dimension for tensor network backend",
-    )
-    parser.add_argument(
-        "--recommend_backend",
-        action="store_true",
-        help="Print backend recommendation and exit",
-    )
-    parser.add_argument(
-        "--available_memory",
-        type=float,
-        default=16.0,
-        help="Available RAM in GB (for recommendation)",
-    )
-    args = parser.parse_args()
+def run_vqc_from_csv(
+    train_csv: str = "data/processed/train_topk_snr.csv",
+    ind_csv: str | None = "data/processed/independent_topk_snr.csv",
+    backend_type: BackendType = BackendType.STATEVECTOR,
+    max_bond_dimension: int = 100,
+    reps: int = 2,
+    max_iter: int = 200,
+    optimizer_name: str = "COBYLA",
+    test_size: float = 0.3,
+    seed: int = 42,
+):
+    """
+    Convenience wrapper: load CSVs and run VQC end-to-end.
 
-    # Load data
-    (X_train, y_train), (X_ind, y_ind) = load_processed(args.train_csv, args.ind_csv)
+    Example (in notebook):
 
-    if args.recommend_backend:
-        print_backend_recommendation(X_train.shape[1], args.available_memory)
-        return
+        from vqc_golub import run_vqc_from_csv, BackendType
 
-    # Map string to BackendType
-    backend_map = {
-        'statevector': BackendType.STATEVECTOR,
-        'tensor_network': BackendType.TENSOR_NETWORK,
-    }
-    backend_type = backend_map[args.backend]
+        for opt in ["COBYLA", "SPSA", "ADAM"]:
+            print("=== Optimizer:", opt, "===")
+            circuit, clf = run_vqc_from_csv(
+                train_csv="data/processed/train_topk_snr.csv",
+                ind_csv="data/processed/independent_topk_snr.csv",
+                backend_type=BackendType.TENSOR_NETWORK,
+                max_bond_dimension=100,
+                reps=2,
+                max_iter=200,
+                optimizer_name=opt,
+            )
+    """
+    (X_train, y_train), (X_ind, y_ind) = load_processed(train_csv, ind_csv)
+    ind_data = (X_ind, y_ind) if X_ind is not None else None
 
-    train_eval_vqc(
-        X_train, y_train,
-        ind_data=(X_ind, y_ind),
-        reps=args.reps,
-        output_dir=args.output_dir,
+    return train_eval_vqc(
+        X_train,
+        y_train,
+        ind_data=ind_data,
+        reps=reps,
+        test_size=test_size,
+        seed=seed,
+        output_dir="results_vqc",
         backend_type=backend_type,
-        max_bond_dimension=args.max_bond_dimension,
-        max_iter=args.max_iter,
+        max_bond_dimension=max_bond_dimension,
+        max_iter=max_iter,
+        optimizer_name=optimizer_name,
     )
-
-
-if __name__ == "__main__":
-    main()

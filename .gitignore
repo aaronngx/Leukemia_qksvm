@@ -1,0 +1,25 @@
+# Python virtual environments
+py311/
+venv/
+env/
+.venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Results and data
+results/
+data/processed*/
+
+# OS
+.DS_Store
+Thumbs.db

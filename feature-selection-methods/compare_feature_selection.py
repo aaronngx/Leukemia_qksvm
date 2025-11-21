@@ -1,21 +1,11 @@
 """Compare SNR and ANOVA F-test feature selection methods."""
 import argparse
-from pathlib import Path
 import sys
 import subprocess
 
 
 def run_experiment(method: str, k: int):
-    """
-    Run feature selection and QKSVM for a given method and k value.
-
-    Parameters
-    ----------
-    method : str
-        'snr' or 'anova_f'
-    k : int
-        Number of features/qubits
-    """
+    """Run feature selection and QKSVM (method: 'snr' or 'anova_f')."""
     print(f"\n{'='*70}")
     print(f"Running {method.upper()} with {k} qubits")
     print(f"{'='*70}\n")
@@ -26,14 +16,13 @@ def run_experiment(method: str, k: int):
         train_csv = f"{out_dir}/train_topk_snr.csv"
         ind_csv = f"{out_dir}/independent_topk_snr.csv"
     elif method == 'anova_f':
-        script = "feature-selection-methods/anova_f_test.py"
+        script = "feature-selection-methods/anova_f.py"
         out_dir = f"data/processed_{method}_k{k}"
         train_csv = f"{out_dir}/train_topk_anova_f.csv"
         ind_csv = f"{out_dir}/independent_topk_anova_f.csv"
     else:
         raise ValueError(f"Unknown method: {method}")
 
-    # Step 1: Feature selection
     print(f"[1/2] Running {method.upper()} feature selection for k={k}...")
     result = subprocess.run([
         sys.executable,
@@ -48,7 +37,6 @@ def run_experiment(method: str, k: int):
 
     print(result.stdout)
 
-    # Step 2: Run QKSVM
     print(f"[2/2] Running QKSVM with {k} qubits...")
     result = subprocess.run([
         sys.executable,
