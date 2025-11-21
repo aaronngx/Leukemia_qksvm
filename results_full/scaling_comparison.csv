@@ -1,0 +1,6 @@
+K_features,Angle_Qubits,Amplitude_Qubits,Qubit_Reduction,Angle_Best_Acc,Amplitude_Best_Acc
+4,4,2,50%,0.8529,0.8529
+8,8,3,62%,0.9412,0.9118
+16,16,4,75%,0.9412,0.9706
+32,32,5,84%,0.6765,0.9706
+50,50,6,88%,0.7941,0.9706

@@ -13,12 +13,21 @@ import joblib
 from qiskit import QuantumCircuit
 
 from angle_encoding import angle_encoding_circuit
+from amplitude_encoding import amplitude_encoding_circuit as amp_encoding_circuit
 from backend_config import (
     BackendType,
+    KernelMethod,
     compute_kernel_element_statevector,
     compute_kernel_element_tensor_network,
+    compute_kernel_element_swap_test,
+    compute_kernel_element_hadamard_test,
     get_backend_info,
 )
+
+
+class EncodingType:
+    ANGLE = "angle"
+    AMPLITUDE = "amplitude"
 
 
 def scale_to_angle(X: np.ndarray):
@@ -55,6 +64,7 @@ def build_kernel(
     XB: np.ndarray,
     feature_map: QuantumCircuit,
     x_params,
+    kernel_method: KernelMethod = KernelMethod.STATEVECTOR,
     backend_type: BackendType = BackendType.STATEVECTOR,
     max_bond_dimension: int = 100,
     verbose: bool = True,
@@ -70,8 +80,10 @@ def build_kernel(
         Parameterized feature map U(x)
     x_params : list
         Parameters of feature_map corresponding to classical features
+    kernel_method : KernelMethod
+        STATEVECTOR, SWAP_TEST, or HADAMARD_TEST
     backend_type : BackendType
-        STATEVECTOR or TENSOR_NETWORK
+        STATEVECTOR or TENSOR_NETWORK (used when kernel_method is STATEVECTOR)
     max_bond_dimension : int
         Max bond dimension for tensor-network backend
     verbose : bool
@@ -88,9 +100,11 @@ def build_kernel(
     total_elements = nA * nB
     if verbose:
         print(f"[INFO] Computing {nA} x {nB} = {total_elements} kernel elements...")
-        print(f"[INFO] Backend: {backend_type.value}")
-        if backend_type == BackendType.TENSOR_NETWORK:
-            print(f"[INFO] Max bond dimension: {max_bond_dimension}")
+        print(f"[INFO] Kernel method: {kernel_method.value}")
+        if kernel_method == KernelMethod.STATEVECTOR:
+            print(f"[INFO] Backend: {backend_type.value}")
+            if backend_type == BackendType.TENSOR_NETWORK:
+                print(f"[INFO] Max bond dimension: {max_bond_dimension}")
 
     for i, x in enumerate(XA):
         if verbose and (i % 5 == 0 or i == nA - 1):
@@ -98,24 +112,35 @@ def build_kernel(
             print(f"  Progress: {i+1}/{nA} rows ({progress:.1f}%)")
 
         for j, z in enumerate(XB):
-            qc = QuantumCircuit(n_qubits)
-
-            # U(x)
             bind_x = {x_params[k]: float(x[k]) for k in range(n_qubits)}
-            qc.compose(feature_map.assign_parameters(bind_x), inplace=True)
-
-            # U(z)†
             bind_z = {x_params[k]: float(z[k]) for k in range(n_qubits)}
-            qc.compose(feature_map.assign_parameters(bind_z).inverse(), inplace=True)
 
-            if backend_type == BackendType.STATEVECTOR:
-                K[i, j] = compute_kernel_element_statevector(qc)
-            elif backend_type == BackendType.TENSOR_NETWORK:
-                K[i, j] = compute_kernel_element_tensor_network(
-                    qc, max_bond_dimension=max_bond_dimension
-                )
-            else:
-                raise ValueError(f"Unknown backend type: {backend_type}")
+            if kernel_method == KernelMethod.SWAP_TEST:
+                # Swap test needs separate circuits for |φ(x)> and |φ(z)>
+                qc_x = feature_map.assign_parameters(bind_x)
+                qc_z = feature_map.assign_parameters(bind_z)
+                K[i, j] = compute_kernel_element_swap_test(qc_x, qc_z)
+
+            elif kernel_method == KernelMethod.HADAMARD_TEST:
+                # Hadamard test uses U(x)U(z)†
+                qc = QuantumCircuit(n_qubits)
+                qc.compose(feature_map.assign_parameters(bind_x), inplace=True)
+                qc.compose(feature_map.assign_parameters(bind_z).inverse(), inplace=True)
+                K[i, j] = compute_kernel_element_hadamard_test(qc)
+
+            else:  # STATEVECTOR (default)
+                qc = QuantumCircuit(n_qubits)
+                qc.compose(feature_map.assign_parameters(bind_x), inplace=True)
+                qc.compose(feature_map.assign_parameters(bind_z).inverse(), inplace=True)
+
+                if backend_type == BackendType.STATEVECTOR:
+                    K[i, j] = compute_kernel_element_statevector(qc)
+                elif backend_type == BackendType.TENSOR_NETWORK:
+                    K[i, j] = compute_kernel_element_tensor_network(
+                        qc, max_bond_dimension=max_bond_dimension
+                    )
+                else:
+                    raise ValueError(f"Unknown backend type: {backend_type}")
 
     if verbose:
         print("[INFO] Kernel computation complete.")
@@ -129,11 +154,13 @@ def train_eval_qksvm(
     test_size: float = 0.3,
     seed: int = 42,
     output_dir: str = "results_qksvm",
+    encoding_type: str = EncodingType.ANGLE,
+    kernel_method: KernelMethod = KernelMethod.STATEVECTOR,
     backend_type: BackendType = BackendType.STATEVECTOR,
     max_bond_dimension: int = 100,
 ):
     """
-    Train and evaluate QKSVM with angle-encoding quantum kernel.
+    Train and evaluate QKSVM with quantum kernel.
 
     Parameters
     ----------
@@ -147,8 +174,12 @@ def train_eval_qksvm(
         Random seed for train/validation split.
     output_dir : str
         Directory to save results.
+    encoding_type : str
+        "angle" or "amplitude" encoding.
+    kernel_method : KernelMethod
+        STATEVECTOR, SWAP_TEST, or HADAMARD_TEST.
     backend_type : BackendType
-        STATEVECTOR or TENSOR_NETWORK.
+        STATEVECTOR or TENSOR_NETWORK (for statevector kernel method).
     max_bond_dimension : int
         For TENSOR_NETWORK backend.
     """
@@ -162,7 +193,10 @@ def train_eval_qksvm(
     print("\n" + "=" * 70)
     print("QUANTUM KERNEL SVM - CONFIGURATION")
     print("=" * 70)
-    print(f"Backend: {backend_type.value}")
+    print(f"Encoding: {encoding_type}")
+    print(f"Kernel method: {kernel_method.value}")
+    if kernel_method == KernelMethod.STATEVECTOR:
+        print(f"Backend: {backend_type.value}")
     print(f"Number of qubits/features: {n_features}")
     print(f"State dimension: {backend_info['state_dimension']:,}")
     if isinstance(backend_info["memory_required_gb"], float):
@@ -182,8 +216,11 @@ def train_eval_qksvm(
         stratify=y,
     )
 
-    # Build angle-encoding feature map
-    feature_map, x_params = angle_encoding_circuit(n_features)
+    # Build feature map based on encoding type
+    if encoding_type == EncodingType.AMPLITUDE:
+        feature_map, x_params, _ = amp_encoding_circuit(n_features)
+    else:  # Default to angle encoding
+        feature_map, x_params = angle_encoding_circuit(n_features)
 
     # Save circuit visualization
     print("[INFO] Saving circuit diagram...")
@@ -202,6 +239,7 @@ def train_eval_qksvm(
         X_train,
         feature_map,
         x_params,
+        kernel_method=kernel_method,
         backend_type=backend_type,
         max_bond_dimension=max_bond_dimension,
     )
@@ -229,6 +267,7 @@ def train_eval_qksvm(
         X_train,
         feature_map,
         x_params,
+        kernel_method=kernel_method,
         backend_type=backend_type,
         max_bond_dimension=max_bond_dimension,
     )
@@ -253,7 +292,9 @@ def train_eval_qksvm(
     results_text.append("QUANTUM KERNEL SVM (QKSVM) RESULTS")
     results_text.append("=" * 60)
     results_text.append(f"\nTimestamp: {timestamp}")
-    results_text.append(f"Backend: {backend_type.value}")
+    results_text.append(f"Kernel method: {kernel_method.value}")
+    if kernel_method == KernelMethod.STATEVECTOR:
+        results_text.append(f"Backend: {backend_type.value}")
     results_text.append(f"Number of qubits/features: {n_features}")
     if backend_type == BackendType.TENSOR_NETWORK:
         results_text.append(f"Max bond dimension: {max_bond_dimension}")
@@ -278,6 +319,7 @@ def train_eval_qksvm(
             X_train,
             feature_map,
             x_params,
+            kernel_method=kernel_method,
             backend_type=backend_type,
             max_bond_dimension=max_bond_dimension,
         )
@@ -327,6 +369,8 @@ def run_qksvm_from_csv(
     train_csv: str = "data/processed/train_topk_snr.csv",
     ind_csv: str | None = "data/processed/independent_topk_snr.csv",
     output_dir: str = "results_qksvm",
+    encoding_type: str = EncodingType.ANGLE,
+    kernel_method: KernelMethod = KernelMethod.STATEVECTOR,
     backend_type: BackendType = BackendType.STATEVECTOR,
     max_bond_dimension: int = 100,
     test_size: float = 0.3,
@@ -336,12 +380,12 @@ def run_qksvm_from_csv(
     Convenience wrapper: load CSVs and run QKSVM end-to-end.
 
     Usage (in a notebook):
-        from qksvm_golub import run_qksvm_from_csv, BackendType
+        from qksvm_golub import run_qksvm_from_csv, BackendType, KernelMethod, EncodingType
         run_qksvm_from_csv(
-            train_csv="data/processed/train_topk_snr.csv",
-            ind_csv="data/processed/independent_topk_snr.csv",
-            backend_type=BackendType.TENSOR_NETWORK,
-            max_bond_dimension=100,
+            train_csv="results/train_top_16_anova_f.csv",
+            ind_csv="results/independent_top_16_anova_f.csv",
+            encoding_type=EncodingType.AMPLITUDE,
+            kernel_method=KernelMethod.SWAP_TEST,
         )
     """
     (X_train, y_train), (X_ind, y_ind) = load_processed(train_csv, ind_csv)
@@ -354,6 +398,83 @@ def run_qksvm_from_csv(
         test_size=test_size,
         seed=seed,
         output_dir=output_dir,
+        encoding_type=encoding_type,
+        kernel_method=kernel_method,
         backend_type=backend_type,
         max_bond_dimension=max_bond_dimension,
     )
+
+
+def main():
+    """CLI entry point for QKSVM."""
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Quantum Kernel SVM for Golub dataset")
+    parser.add_argument(
+        "--train_csv",
+        default="results/train_top_16_anova_f.csv",
+        help="Path to training CSV",
+    )
+    parser.add_argument(
+        "--ind_csv",
+        default="results/independent_top_16_anova_f.csv",
+        help="Path to independent test CSV",
+    )
+    parser.add_argument(
+        "--output_dir",
+        default="results_qksvm",
+        help="Output directory",
+    )
+    parser.add_argument(
+        "--encoding",
+        choices=["angle", "amplitude"],
+        default="angle",
+        help="Feature encoding method",
+    )
+    parser.add_argument(
+        "--kernel_method",
+        choices=["statevector", "swap_test", "hadamard_test"],
+        default="statevector",
+        help="Kernel computation method",
+    )
+    parser.add_argument(
+        "--backend",
+        choices=["statevector", "tensor_network"],
+        default="statevector",
+        help="Backend for statevector kernel method",
+    )
+    parser.add_argument(
+        "--max_bond_dimension",
+        type=int,
+        default=100,
+        help="Max bond dimension for tensor network",
+    )
+    args = parser.parse_args()
+
+    encoding_map = {
+        "angle": EncodingType.ANGLE,
+        "amplitude": EncodingType.AMPLITUDE,
+    }
+    kernel_method_map = {
+        "statevector": KernelMethod.STATEVECTOR,
+        "swap_test": KernelMethod.SWAP_TEST,
+        "hadamard_test": KernelMethod.HADAMARD_TEST,
+    }
+    backend_map = {
+        "statevector": BackendType.STATEVECTOR,
+        "tensor_network": BackendType.TENSOR_NETWORK,
+    }
+
+    run_qksvm_from_csv(
+        train_csv=args.train_csv,
+        ind_csv=args.ind_csv,
+        output_dir=args.output_dir,
+        encoding_type=encoding_map[args.encoding],
+        kernel_method=kernel_method_map[args.kernel_method],
+        backend_type=backend_map[args.backend],
+        max_bond_dimension=args.max_bond_dimension,
+    )
+
+
+if __name__ == "__main__":
+    main()

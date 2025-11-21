@@ -212,51 +212,123 @@ def predict_weighted_voting(X: pd.DataFrame, a: pd.Series, b: pd.Series):
 # Main panel generation
 # ==========================
 
-def main():
-    print(f"\n=== Golub weighted-voting panel generation (K={K}) ===\n")
+def load_independent_set(ind_csv: str | Path, labels_csv: str | Path):
+    """Load independent test set."""
+    ind_csv = Path(ind_csv)
+    labels_csv = Path(labels_csv)
 
-    # 1) Load data
-    X_train, y_train = load_golub_train(TRAIN_CSV, LABELS_CSV)
+    df_raw = pd.read_csv(ind_csv)
+    X_ind_raw = df_raw.set_index('Gene Description').drop(columns=['Gene Accession Number'])
 
-    # 2) Compute P-scores on all genes (38 samples)
+    if X_ind_raw.index.duplicated().any():
+        X_ind_raw = X_ind_raw[~X_ind_raw.index.duplicated(keep="first")]
+
+    labels = pd.read_csv(labels_csv)
+    id_col = [c for c in labels.columns if "id" in c.lower() or "sample" in c.lower()]
+    cls_col = [c for c in labels.columns if "diag" in c.lower() or "class" in c.lower() or "type" in c.lower() or "cancer" in c.lower()]
+    id_col = id_col[0] if id_col else labels.columns[0]
+    cls_col = cls_col[0] if cls_col else labels.columns[1]
+
+    labels = labels[[id_col, cls_col]].rename(columns={id_col: "sample_id", cls_col: "diagnosis"})
+    labels["diagnosis"] = labels["diagnosis"].str.upper().str.strip()
+    labels["sample_id"] = labels["sample_id"].astype(str)
+
+    # Independent set samples are 39-72
+    ind_sample_ids = [str(i) for i in range(39, 73)]
+    common_samples = [s for s in ind_sample_ids if s in X_ind_raw.columns]
+    X_ind = X_ind_raw.loc[:, common_samples]
+
+    labels_ind = labels[labels["sample_id"].isin(common_samples)].reset_index(drop=True)
+    y_ind = labels_ind.set_index("sample_id").loc[X_ind.columns, "diagnosis"].values
+
+    return X_ind, y_ind
+
+
+def run_snr_selection(
+    k: int,
+    out_dir: str = "results",
+    train_csv: str = None,
+    ind_csv: str = None,
+    labels_csv: str = None,
+):
+    """Run SNR feature selection and output train/test CSVs."""
+    import argparse
+
+    out_path = Path(out_dir)
+    out_path.mkdir(parents=True, exist_ok=True)
+
+    train_csv = train_csv or DATA_DIR / "data_set_ALL_AML_train.csv"
+    ind_csv = ind_csv or DATA_DIR / "data_set_ALL_AML_independent.csv"
+    labels_csv = labels_csv or LABELS_CSV
+
+    print(f"\n=== SNR Feature Selection (K={k}) ===\n")
+
+    # Load training data
+    X_train, y_train = load_golub_train(train_csv, labels_csv)
+
+    # Compute P-scores
     P_all = compute_P_scores(X_train, y_train)
-    topk_genes = P_all.index[:K].tolist()
+    topk_genes = P_all.index[:k].tolist()
 
-    print(f"\nTop-{K} genes selected by |P(g,c)|:")
-    top10_df = pd.DataFrame({
-        "gene": P_all.index[:10],
-        "P_score": P_all.values[:10],
-        "abs_P": np.abs(P_all.values[:10]),
-        "favors": np.where(P_all.values[:10] > 0, "ALL", "AML"),
+    print(f"Top-{k} genes selected by |P(g,c)|:")
+    for i, gene in enumerate(topk_genes[:10]):
+        print(f"  {i+1}. {gene[:50]}... P={P_all[gene]:.3f}")
+
+    # Convert labels to numeric
+    label_map = {"ALL": 0, "AML": 1}
+    y_train_numeric = np.array([label_map[y] for y in y_train])
+
+    # Build training CSV with selected features
+    train_data = X_train.loc[topk_genes].T.copy()
+    train_data.columns = [f"gene_{i}" for i in range(k)]
+    train_data["label"] = y_train_numeric
+    train_data.to_csv(out_path / f"train_top_{k}_snr.csv", index=False)
+    print(f"\nTrain CSV saved: {out_path / f'train_top_{k}_snr.csv'}")
+
+    # Load and process independent set
+    if Path(ind_csv).exists():
+        X_ind, y_ind = load_independent_set(ind_csv, labels_csv)
+        y_ind_numeric = np.array([label_map[y] for y in y_ind])
+
+        # Filter to selected genes
+        common_genes = [g for g in topk_genes if g in X_ind.index]
+        if len(common_genes) < k:
+            print(f"Warning: Only {len(common_genes)}/{k} genes found in independent set")
+
+        ind_data = X_ind.loc[common_genes].T.copy()
+        ind_data.columns = [f"gene_{i}" for i in range(len(common_genes))]
+        ind_data["label"] = y_ind_numeric
+        ind_data.to_csv(out_path / f"independent_top_{k}_snr.csv", index=False)
+        print(f"Independent CSV saved: {out_path / f'independent_top_{k}_snr.csv'}")
+
+    # Save gene scores
+    scores_df = pd.DataFrame({
+        "gene_description": topk_genes,
+        "snr_score": [P_all[g] for g in topk_genes],
+        "favors_class": ["ALL" if P_all[g] > 0 else "AML" for g in topk_genes],
     })
-    print(top10_df.to_string(index=False))
+    scores_df.to_csv(out_path / f"top_{k}_snr_scores.csv", index=False)
+    print(f"Scores CSV saved: {out_path / f'top_{k}_snr_scores.csv'}")
 
-    # 3) Fit final model on all 38 training samples using top-K genes
-    print(f"\nTraining final model on all {X_train.shape[1]} samples with top-{K} genes...\n")
-    a_final, b_final = fit_weighted_voting(X_train, y_train, topk_genes)
 
-    # 4) Build panel DataFrame (same structure as topK50_panel_train38.csv)
-    panel_df = pd.DataFrame({
-        "gene": a_final.index,
-        "P_weight": a_final.values,
-        "threshold_b": b_final.values,
-        "favors_class": np.where(a_final.values >= 0, "ALL", "AML"),
-        "abs_P": np.abs(a_final.values),
-    }).sort_values("abs_P", ascending=False).reset_index(drop=True)
+def main():
+    import argparse
 
-    n_train = X_train.shape[1]
-    panel_csv = OUTPUT_DIR / f"topK{K}_panel_train{n_train}.csv"
-    panel_df.to_csv(panel_csv, index=False)
+    parser = argparse.ArgumentParser(description="SNR feature selection for Golub dataset")
+    parser.add_argument("--k", type=int, default=K, help="Number of top features to select")
+    parser.add_argument("--out_dir", default="results", help="Output directory")
+    parser.add_argument("--train_csv", default=None, help="Training CSV path")
+    parser.add_argument("--ind_csv", default=None, help="Independent test CSV path")
+    parser.add_argument("--labels_csv", default=None, help="Labels CSV path")
+    args = parser.parse_args()
 
-    print(f"Top-{K} gene panel (top 15 shown):\n")
-    print(panel_df.head(15).to_string(index=False))
-    print(f"\nPanel saved to: {panel_csv}")
-
-    # 5) Sanity check: training accuracy
-    y_pred_train, ps_train = predict_weighted_voting(X_train, a_final, b_final)
-    train_acc = accuracy_score(y_train, y_pred_train)
-    print(f"\nTraining set resubstitution accuracy: {train_acc:.3f}")
-    print(f"Mean prediction strength on training: {np.mean(ps_train):.3f}")
+    run_snr_selection(
+        k=args.k,
+        out_dir=args.out_dir,
+        train_csv=args.train_csv,
+        ind_csv=args.ind_csv,
+        labels_csv=args.labels_csv,
+    )
 
 
 if __name__ == "__main__":

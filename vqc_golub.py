@@ -59,9 +59,9 @@ def build_vqc(num_features: int, reps: int = 2):
     feature_map, x_params = angle_encoding_circuit(num_features)
     ansatz = TwoLocal(
         num_qubits=num_features,
-        rotation_blocks="ry",
-        entanglement_blocks="cz",
-        entanglement="full",
+        rotation_blocks=["rx", "rz", "rx"],
+        entanglement_blocks="cx",
+        entanglement="linear",
         reps=reps,
     )
 

@@ -10,6 +10,13 @@ class BackendType(Enum):
     TENSOR_NETWORK = "tensor_network"  # MPS via Aer
 
 
+class KernelMethod(Enum):
+    """Available kernel computation methods."""
+    STATEVECTOR = "statevector"  # Direct statevector overlap
+    SWAP_TEST = "swap_test"  # Swap test protocol
+    HADAMARD_TEST = "hadamard_test"  # Hadamard test protocol
+
+
 def get_statevector_backend():
     """Get reference statevector backend from qiskit.quantum_info."""
     from qiskit.quantum_info import Statevector
@@ -147,6 +154,164 @@ def compute_kernel_element_tensor_network(
             "qiskit-aer is not installed. Please install it with:\n"
             "pip install qiskit-aer"
         )
+
+
+def compute_kernel_element_swap_test(
+    qc_x: QuantumCircuit,
+    qc_z: QuantumCircuit,
+    shots: int = 8192
+) -> float:
+    """
+    Compute kernel element using the Swap Test protocol.
+
+    The Swap Test measures |<φ(x)|φ(z)>|² using:
+    1. Ancilla qubit initialized to |0>
+    2. Hadamard on ancilla
+    3. Controlled-SWAP between |φ(x)> and |φ(z)>
+    4. Hadamard on ancilla
+    5. Measure ancilla: P(0) = (1 + |<φ(x)|φ(z)>|²) / 2
+
+    Parameters
+    ----------
+    qc_x : QuantumCircuit
+        Circuit preparing |φ(x)>
+    qc_z : QuantumCircuit
+        Circuit preparing |φ(z)>
+    shots : int
+        Number of measurement shots
+
+    Returns
+    -------
+    float
+        Kernel value |<φ(x)|φ(z)>|²
+    """
+    from qiskit import ClassicalRegister
+
+    n_qubits = qc_x.num_qubits
+    # Total qubits: 1 ancilla + n_qubits for |x> + n_qubits for |z>
+    total_qubits = 1 + 2 * n_qubits
+
+    qc = QuantumCircuit(total_qubits, 1)
+
+    # Prepare |φ(x)> on qubits 1 to n_qubits
+    qc.compose(qc_x, qubits=list(range(1, n_qubits + 1)), inplace=True)
+
+    # Prepare |φ(z)> on qubits n_qubits+1 to 2*n_qubits
+    qc.compose(qc_z, qubits=list(range(n_qubits + 1, 2 * n_qubits + 1)), inplace=True)
+
+    # Swap Test
+    qc.h(0)  # Hadamard on ancilla
+    for i in range(n_qubits):
+        qc.cswap(0, 1 + i, n_qubits + 1 + i)  # Controlled-SWAP
+    qc.h(0)  # Hadamard on ancilla
+
+    # Measure ancilla
+    qc.measure(0, 0)
+
+    # Run simulation
+    try:
+        from qiskit_aer import AerSimulator
+        backend = AerSimulator()
+    except ImportError:
+        from qiskit.primitives import Sampler
+        sampler = Sampler()
+        job = sampler.run([qc], shots=shots)
+        result = job.result()
+        quasi_dist = result.quasi_dists[0]
+        p0 = quasi_dist.get(0, 0)
+        return float(2 * p0 - 1)  # |<x|z>|² = 2*P(0) - 1
+
+    job = backend.run(qc, shots=shots)
+    result = job.result()
+    counts = result.get_counts()
+
+    p0 = counts.get('0', 0) / shots
+    # |<φ(x)|φ(z)>|² = 2*P(0) - 1
+    overlap_sq = max(0.0, 2 * p0 - 1)
+
+    return float(overlap_sq)
+
+
+def compute_kernel_element_hadamard_test(
+    qc: QuantumCircuit,
+    shots: int = 8192
+) -> float:
+    """
+    Compute kernel element using the Hadamard Test protocol.
+
+    For a unitary U = U(x)U(z)†, the Hadamard Test measures:
+    Re(<0|U|0>) using ancilla-controlled operations.
+
+    Since we want |<0|U|0>|², and for our kernel U = U(x)U(z)†,
+    this gives the fidelity.
+
+    Parameters
+    ----------
+    qc : QuantumCircuit
+        Circuit U(x)U(z)† to test (should map |0> back to |0> for identical x,z)
+    shots : int
+        Number of measurement shots
+
+    Returns
+    -------
+    float
+        Kernel value |<0|U|0>|²
+    """
+    from qiskit import transpile
+
+    n_qubits = qc.num_qubits
+    # Total: 1 ancilla + n_qubits for the system
+    total_qubits = 1 + n_qubits
+
+    qc_test = QuantumCircuit(total_qubits, 1)
+
+    # Hadamard on ancilla
+    qc_test.h(0)
+
+    # Controlled-U on system qubits
+    # Need to decompose the controlled circuit so Aer can handle it
+    controlled_u = qc.control(1)
+    # Decompose multiple times to get to basic gates
+    controlled_u_decomposed = controlled_u.decompose().decompose().decompose().decompose()
+    qc_test.compose(controlled_u_decomposed, qubits=[0] + list(range(1, n_qubits + 1)), inplace=True)
+
+    # Hadamard on ancilla
+    qc_test.h(0)
+
+    # Measure ancilla
+    qc_test.measure(0, 0)
+
+    # Run simulation
+    try:
+        from qiskit_aer import AerSimulator
+        backend = AerSimulator()
+        # Transpile to ensure all gates are basic gates that Aer understands
+        qc_transpiled = transpile(qc_test, backend, optimization_level=0)
+        job = backend.run(qc_transpiled, shots=shots)
+        result = job.result()
+        counts = result.get_counts()
+    except ImportError:
+        # Fallback to statevector computation
+        from qiskit.quantum_info import Statevector
+        # Remove measurement for statevector
+        qc_no_meas = QuantumCircuit(total_qubits)
+        qc_no_meas.h(0)
+        qc_no_meas.compose(controlled_u_decomposed, qubits=[0] + list(range(1, n_qubits + 1)), inplace=True)
+        qc_no_meas.h(0)
+        sv = Statevector.from_instruction(qc_no_meas)
+        # Probability of ancilla being 0 (sum over all states where first qubit is 0)
+        probs = np.abs(sv.data) ** 2
+        p0 = sum(probs[i] for i in range(len(probs)) if i % 2 == 0)
+        real_part = 2 * p0 - 1
+        return float(max(0.0, real_part ** 2))
+
+    p0 = counts.get('0', 0) / shots
+    # Re(<0|U|0>) = 2*P(0) - 1
+    # For pure states, |<0|U|0>|² ≈ Re(<0|U|0>)² when Im part is small
+    real_part = 2 * p0 - 1
+    overlap_sq = max(0.0, real_part ** 2)
+
+    return float(overlap_sq)
 
 
 def get_backend_info(backend_type: BackendType, n_qubits: int) -> dict:
