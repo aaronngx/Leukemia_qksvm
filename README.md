@@ -1,6 +1,6 @@
 # Quantum Kernel SVM for Leukemia Classification
 
-A quantum machine learning project for classifying leukemia subtypes (ALL vs AML) using the Golub dataset. This project implements quantum-enhanced classification with angle encoding and supports **flexible backend configuration** for scaling from small (2-16 qubits) to large systems (32+ qubits).
+A quantum machine learning project for classifying leukemia subtypes (ALL vs AML) using the Golub dataset. This project implements quantum-enhanced classification with multiple encoding strategies and supports **flexible backend configuration** for scaling from small (2-16 qubits) to large systems (32+ qubits).
 
 ## Overview
 
@@ -9,6 +9,8 @@ This project compares quantum machine learning approaches for gene expression-ba
 - **Quantum Kernel SVM (QKSVM)**: Uses quantum kernels for classification
 - **Variational Quantum Classifier (VQC)**: Trainable quantum circuit classifier
 - **Feature Selection**: SNR and ANOVA F-test methods
+- **Encoding Methods**: Angle encoding (K features → K qubits) and Amplitude encoding (K features → log₂(K) qubits)
+- **Kernel Methods**: Statevector, Tensor Network (MPS), Swap Test, Hadamard Test
 - **Flexible Backends**: Exact statevector or tensor network (MPS) simulation
 - **Scalability**: From 2 qubits to 32+ qubits with appropriate backend selection
 
@@ -16,23 +18,27 @@ This project compares quantum machine learning approaches for gene expression-ba
 
 ```
 Leukemia_qksvm/
+├── Experiment.py                        # Unified experiment runner (interactive)
+├── angle_encoding.py                    # Angle encoding circuit
+├── amplitude_encoding.py                # Amplitude encoding circuit
+├── backend_config.py                    # Backend configuration & kernel methods
+├── qksvm_golub.py                       # QKSVM implementation
+├── vqc_golub.py                         # VQC implementation
+├── generate_figures.py                  # Result visualization & figures
+├── visualize_circuits.py                # Quantum circuit visualization
+│
+├── feature-selection-methods/
+│   ├── signal_to_noise.py               # SNR feature selection
+│   ├── anova_f.py                       # ANOVA F-test feature selection
+│   └── compare_feature_selection.py     # Compare feature selection methods
+│
 ├── data/
 │   ├── raw/                             # Raw Golub dataset
 │   └── processed_*/                     # Processed data (various configurations)
 │
 ├── results/                             # Experiment results
-│   ├── qksvm_*/                         # QKSVM results
-│   └── vqc_*/                           # VQC results
-│
-├── feature-selection-methods/
-│   ├── signal_to_noise_ratio.py         # SNR feature selection
-│   └── anova_f_test.py                  # ANOVA F-test feature selection
-│
-└── Core Implementation:
-    ├── backend_config.py                # Backend configuration & management
-    ├── angle_encoding.py                # Quantum feature encoding
-    ├── qksvm_golub.py                   # QKSVM (supports all backends)
-    └── vqc_golub.py                     # VQC (supports all backends)
+├── results_golub_panel/                 # Panel experiment results
+└── figures/                             # Generated figures
 ```
 
 ## Feature Selection Methods
@@ -50,10 +56,7 @@ Where:
 
 **Usage:**
 ```bash
-python feature-selection-methods/signal_to_noise_ratio.py \
-    --train_csv data/raw/data_set_ALL_AML_train.csv \
-    --ind_csv data/raw/data_set_ALL_AML_independent.csv \
-    --labels_csv data/raw/actual.csv \
+python feature-selection-methods/signal_to_noise.py \
     --k 8 \
     --out_dir data/processed_snr_k8
 ```
@@ -73,10 +76,7 @@ Larger F-scores indicate stronger class separation.
 
 **Usage:**
 ```bash
-python feature-selection-methods/anova_f_test.py \
-    --train_csv data/raw/data_set_ALL_AML_train.csv \
-    --ind_csv data/raw/data_set_ALL_AML_independent.csv \
-    --labels_csv data/raw/actual.csv \
+python feature-selection-methods/anova_f.py \
     --k 8 \
     --out_dir data/processed_anova_f_k8
 ```
@@ -131,17 +131,39 @@ python vqc_golub.py --train_csv data/processed_k32/train_topk_snr.csv \
 
 ## Running Experiments
 
-### Basic Workflow
+### Quick Start: Interactive Mode (Recommended)
+
+The easiest way to run experiments is using the unified experiment runner:
+
+```bash
+python Experiment.py
+```
+
+This launches an interactive menu that guides you through:
+1. **Feature Selection Method**: ANOVA F-test, SNR, or Both
+2. **K Values**: Number of features to select (e.g., 4, 8, 16, 32, 50)
+3. **Encoding Type**: Angle, Amplitude, or Both
+4. **Quantum Model**: VQC, QKSVM, or Both
+5. **Kernel Method** (QKSVM only): Statevector, Tensor Network, Swap Test, Hadamard Test
+
+The runner automatically:
+- Runs feature selection for each (method, K) combination
+- Scales features appropriately for each encoding type
+- Switches to tensor network backend for large circuits (>20 qubits)
+- Reports metrics: Accuracy, AUROC, F1-Score, Recall
+- Saves results to `results/experiment_results.csv`
+
+### Manual Workflow
 
 **Step 1: Feature Selection**
 ```bash
 # Select top k features using ANOVA F-test
-python feature-selection-methods/anova_f_test.py \
+python feature-selection-methods/anova_f.py \
     --k 8 \
     --out_dir data/processed_k8
 
 # Or using SNR
-python feature-selection-methods/signal_to_noise_ratio.py \
+python feature-selection-methods/signal_to_noise.py \
     --k 8 \
     --out_dir data/processed_k8
 ```
@@ -150,23 +172,23 @@ python feature-selection-methods/signal_to_noise_ratio.py \
 ```bash
 # QKSVM with exact simulation (8 qubits)
 python qksvm_golub.py \
-    --train_csv data/processed_k8/train_topk_anova_f.csv \
-    --ind_csv data/processed_k8/independent_topk_anova_f.csv \
+    --train_csv data/processed_k8/train_top_8_anova_f.csv \
+    --ind_csv data/processed_k8/independent_top_8_anova_f.csv \
     --backend statevector \
     --output_dir results/qksvm_k8
 
 # QKSVM with tensor network (32 qubits)
 python qksvm_golub.py \
-    --train_csv data/processed_k32/train_topk_anova_f.csv \
-    --ind_csv data/processed_k32/independent_topk_anova_f.csv \
+    --train_csv data/processed_k32/train_top_32_anova_f.csv \
+    --ind_csv data/processed_k32/independent_top_32_anova_f.csv \
     --backend tensor_network \
     --max_bond_dimension 100 \
     --output_dir results/qksvm_k32_tnw
 
 # VQC with tensor network
 python vqc_golub.py \
-    --train_csv data/processed_k32/train_topk_snr.csv \
-    --ind_csv data/processed_k32/independent_topk_snr.csv \
+    --train_csv data/processed_k32/train_top_32_snr.csv \
+    --ind_csv data/processed_k32/independent_top_32_snr.csv \
     --backend tensor_network \
     --max_bond_dimension 100 \
     --reps 2 \
@@ -174,89 +196,32 @@ python vqc_golub.py \
     --output_dir results/vqc_k32
 ```
 
-### Example: Complete Experiment
-
-```bash
-# 1. Feature selection (ANOVA F-test, k=16)
-python feature-selection-methods/anova_f_test.py --k 16 --out_dir data/processed_k16
-
-# 2. Get backend recommendation
-python qksvm_golub.py \
-    --train_csv data/processed_k16/train_topk_anova_f.csv \
-    --recommend_backend
-
-# 3. Run QKSVM with recommended backend
-python qksvm_golub.py \
-    --train_csv data/processed_k16/train_topk_anova_f.csv \
-    --ind_csv data/processed_k16/independent_topk_anova_f.csv \
-    --backend statevector \
-    --output_dir results/qksvm_anova_f_k16
-```
-
-Results will be in `results/qksvm_anova_f_k16/`:
-- `qksvm_results_*.txt` - Performance metrics
-- `circuit_*.png` - Quantum circuit diagram
-- `qksvm_model_*.pkl` - Trained model
-- `*_predictions_*.csv` - Predictions
-
-### Legacy Examples
-
-**Single Feature Selection + QKSVM Run (old workflow)**
-
-**Using SNR:**
-```bash
-# Step 1: Feature selection
-python feature-selection-methods/signal_to_noise_ratio.py --k 4 --out_dir data/processed_k4
-
-# Step 2: Train QKSVM
-python qksvm_golub.py \
-    --train_csv data/processed_k4/train_topk_snr.csv \
-    --ind_csv data/processed_k4/independent_topk_snr.csv \
-    --output_dir results/qksvm_k4
-```
-
-**Using ANOVA F-test:**
-```bash
-# Step 1: Feature selection
-python feature-selection-methods/anova_f_test.py --k 4 --out_dir data/processed_anova_f_k4
-
-# Step 2: Train QKSVM
-python qksvm_golub.py \
-    --train_csv data/processed_anova_f_k4/train_topk_anova_f.csv \
-    --ind_csv data/processed_anova_f_k4/independent_topk_anova_f.csv \
-    --output_dir results/qksvm_anova_f_k4
-```
-
-### Automated Experiments (Multiple k values)
-
-**Run SNR experiments:**
-```bash
-python run_qubit_experiments.py
-```
-This runs QKSVM with k ∈ {2, 4, 8, 16} using SNR feature selection.
-
-**Run ANOVA F experiments:**
-```bash
-python run_qubit_experiments_anova.py
-```
-This runs QKSVM with k ∈ {2, 4, 8, 16} using ANOVA F-test feature selection.
-
 ### Compare Feature Selection Methods
 
-Run both methods and compare:
 ```bash
-# Compare both methods for all k values
-python compare_feature_selection.py
-
-# Compare for specific k values
-python compare_feature_selection.py --k_values 4 8
-
-# Run only SNR
-python compare_feature_selection.py --methods snr --k_values 4 8
-
-# Run only ANOVA F
-python compare_feature_selection.py --methods anova_f --k_values 4 8
+python feature-selection-methods/compare_feature_selection.py
 ```
+
+## Encoding Methods
+
+### Angle Encoding
+- **Mapping**: K features → K qubits
+- **Circuit**: Each feature encoded as RY(θ) rotation
+- **Use case**: Direct feature-to-qubit mapping, full expressibility
+
+### Amplitude Encoding
+- **Mapping**: K features → ceil(log₂(K)) qubits
+- **Circuit**: Features encoded in amplitude of quantum state
+- **Use case**: Compact representation, fewer qubits needed
+
+## Kernel Methods (QKSVM)
+
+| Method | Description | Qubits | Notes |
+|--------|-------------|--------|-------|
+| **statevector** | Exact state simulation | ≤20 | Reference implementation |
+| **tensor_network** | MPS approximation | 20-100+ | Scalable, approximate |
+| **swap_test** | Measurement-based | Any | Uses ancilla qubit |
+| **hadamard_test** | Measurement-based | Any | Alternative to swap test |
 
 ## Quantum Kernel SVM Details
 
@@ -336,8 +301,10 @@ pip install qiskit qiskit-machine-learning qiskit-algorithms scikit-learn pandas
 
 All experiments report:
 - **Accuracy**: Overall classification accuracy
-- **Precision/Recall/F1-score**: Per-class metrics
-- **Support**: Number of samples per class
+- **AUROC**: Area Under ROC Curve
+- **F1-Score**: Harmonic mean of precision and recall
+- **Recall**: Sensitivity / True positive rate
+- **Precision**: Positive predictive value
 
 Results are provided for:
 1. **Validation set**: Held-out portion of training data
@@ -352,27 +319,25 @@ Both methods select features with strong class discrimination but use different 
 
 ANOVA F-test is more statistically principled and commonly used in genomics, while SNR is simpler and computationally faster.
 
-The `anova_f_scores.csv` file allows you to:
-- Inspect which genes have highest F-scores
-- Compare rankings with SNR
-- Analyze feature importance
-
 ## Example Workflow
 
 ```bash
-# 1. Test ANOVA F implementation
-python test_anova_f.py
+# Option 1: Interactive mode (recommended)
+python Experiment.py
 
-# 2. Run comparison for k=4 and k=8
-python compare_feature_selection.py --k_values 4 8
+# Option 2: Manual workflow
+# 1. Run feature selection
+python feature-selection-methods/anova_f.py --k 16 --out_dir results
 
-# 3. Analyze results
-# Compare accuracy in:
-#   results/qksvm_snr_k4/qksvm_results_*.txt
-#   results/qksvm_anova_f_k4/qksvm_results_*.txt
+# 2. Run QKSVM
+python qksvm_golub.py \
+    --train_csv results/train_top_16_anova_f.csv \
+    --ind_csv results/independent_top_16_anova_f.csv \
+    --backend statevector \
+    --output_dir results/qksvm_k16
 
-# 4. Check feature rankings
-# View data/processed_anova_f_k4/anova_f_scores.csv
+# 3. Generate figures
+python generate_figures.py
 ```
 
 ## References
@@ -381,6 +346,3 @@ python compare_feature_selection.py --k_values 4 8
 - **Havlíček et al. (2019)**: "Supervised learning with quantum-enhanced feature spaces"
 - Quantum feature encoding and kernel methods
 
-## License
-
-This project is for educational and research purposes.

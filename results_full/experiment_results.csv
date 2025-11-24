@@ -1,5 +1,0 @@
-model,encoding,kernel_method,val_acc,ind_acc,ind_auroc,ind_f1,ind_recall,n_qubits,feature_selection,k
-QKSVM,angle,tensor_network,1.0,0.6764705882352942,0.7063492063492064,0.5217391304347826,0.8571428571428571,32,anova,32
-QKSVM,angle,tensor_network,0.75,0.7941176470588235,0.7380952380952381,0.0,0.0,50,anova,50
-QKSVM,angle,tensor_network,0.75,0.5882352941176471,0.925,0.0,0.0,32,snr,32
-QKSVM,angle,tensor_network,0.75,0.5882352941176471,0.9321428571428572,0.0,0.0,50,snr,50
