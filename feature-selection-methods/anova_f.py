@@ -75,26 +75,25 @@ def preprocess_raw_data(raw_csv: str, labels_csv: str) -> tuple[pd.DataFrame, pd
     print(f"[INFO] Found {len(numeric_cols)} sample columns in {raw_csv}")
 
     X = df_raw[numeric_cols].values.T
-    gene_names = [f"gene_{i}" for i in range(X.shape[1])]
-    X_df = pd.DataFrame(X, columns=gene_names)
+    # Use actual gene descriptions as column names
+    X_df = pd.DataFrame(X, columns=gene_descriptions)
 
     metadata_df = pd.DataFrame({
-        'feature_index': gene_names,
         'gene_description': gene_descriptions,
         'gene_accession': gene_accessions
     })
 
     df_labels = pd.read_csv(labels_csv)
-    label_map = {'ALL': 0, 'AML': 1}
-    labels = df_labels['cancer'].map(label_map).values
+    # Keep labels as ALL/AML strings
+    labels = df_labels['cancer'].values
 
     n_samples = len(numeric_cols)
     if len(labels) >= n_samples:
-        y = pd.Series(labels[:n_samples], name='label')
+        y = pd.Series(labels[:n_samples], name='cancer')
     else:
         raise ValueError(f"Not enough labels ({len(labels)}) for samples ({n_samples})")
 
-    print(f"[INFO] Preprocessed shape: {X_df.shape}, Labels: ALL={sum(y==0)}, AML={sum(y==1)}")
+    print(f"[INFO] Preprocessed shape: {X_df.shape}, Labels: ALL={sum(y=='ALL')}, AML={sum(y=='AML')}")
 
     return X_df, y, metadata_df
 

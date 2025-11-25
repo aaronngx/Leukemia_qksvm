@@ -274,21 +274,17 @@ def run_snr_selection(
     for i, gene in enumerate(topk_genes[:10]):
         print(f"  {i+1}. {gene[:50]}... P={P_all[gene]:.3f}")
 
-    # Convert labels to numeric
-    label_map = {"ALL": 0, "AML": 1}
-    y_train_numeric = np.array([label_map[y] for y in y_train])
-
     # Build training CSV with selected features
     train_data = X_train.loc[topk_genes].T.copy()
-    train_data.columns = [f"gene_{i}" for i in range(k)]
-    train_data["label"] = y_train_numeric
+    train_data.columns = topk_genes  # Use actual gene names
+    train_data["cancer"] = y_train  # Keep as ALL/AML strings
+    train_data["patient"] = [f"{i+1}" for i in range(len(train_data))]
     train_data.to_csv(out_path / f"train_top_{k}_snr.csv", index=False)
     print(f"\nTrain CSV saved: {out_path / f'train_top_{k}_snr.csv'}")
 
     # Load and process independent set
     if Path(ind_csv).exists():
         X_ind, y_ind = load_independent_set(ind_csv, labels_csv)
-        y_ind_numeric = np.array([label_map[y] for y in y_ind])
 
         # Filter to selected genes
         common_genes = [g for g in topk_genes if g in X_ind.index]
@@ -296,8 +292,9 @@ def run_snr_selection(
             print(f"Warning: Only {len(common_genes)}/{k} genes found in independent set")
 
         ind_data = X_ind.loc[common_genes].T.copy()
-        ind_data.columns = [f"gene_{i}" for i in range(len(common_genes))]
-        ind_data["label"] = y_ind_numeric
+        ind_data.columns = common_genes  # Use actual gene names
+        ind_data["cancer"] = y_ind  # Keep as ALL/AML strings
+        ind_data["patient"] = [f"{i+39}" for i in range(len(ind_data))]  # Independent set is patients 39-72
         ind_data.to_csv(out_path / f"independent_top_{k}_snr.csv", index=False)
         print(f"Independent CSV saved: {out_path / f'independent_top_{k}_snr.csv'}")
 
