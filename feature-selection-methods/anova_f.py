@@ -6,8 +6,15 @@ import pandas as pd
 
 def calculate_anova_f(X: pd.DataFrame, y: pd.Series) -> pd.Series:
     """Calculate ANOVA F-statistic = between-class variance / within-class variance."""
-    class_0 = X[y == 0]
-    class_1 = X[y == 1]
+    # Convert labels to numeric for computation if they are strings
+    if y.dtype == 'object':
+        label_map = {'ALL': 0, 'AML': 1}
+        y_numeric = y.map(label_map)
+    else:
+        y_numeric = y
+
+    class_0 = X[y_numeric == 0]
+    class_1 = X[y_numeric == 1]
 
     n_0 = len(class_0)
     n_1 = len(class_1)
@@ -45,8 +52,15 @@ def select_features_anova_f_balanced(X_train: pd.DataFrame, y_train: pd.Series, 
         k += 1
         print(f"[INFO] k must be even for balanced selection. Adjusted to k={k}.")
 
-    X_all = X_train[y_train == 0]
-    X_aml = X_train[y_train == 1]
+    # Convert labels to numeric for computation if they are strings
+    if y_train.dtype == 'object':
+        label_map = {'ALL': 0, 'AML': 1}
+        y_numeric = y_train.map(label_map)
+    else:
+        y_numeric = y_train
+
+    X_all = X_train[y_numeric == 0]
+    X_aml = X_train[y_numeric == 1]
 
     all_means = X_all.mean()
     aml_means = X_aml.mean()
@@ -112,7 +126,7 @@ def run_feature_selection(
     out_path.mkdir(parents=True, exist_ok=True)
 
     df_peek = pd.read_csv(input_train, nrows=1)
-    needs_preprocessing = 'label' not in df_peek.columns
+    needs_preprocessing = 'label' not in df_peek.columns and 'cancer' not in df_peek.columns
 
     metadata = None
     if needs_preprocessing:
@@ -122,8 +136,9 @@ def run_feature_selection(
         X_train, y_train, metadata = preprocess_raw_data(input_train, labels_csv)
     else:
         df_train = pd.read_csv(input_train)
-        y_train = df_train["label"]
-        X_train = df_train.drop(columns=["label"])
+        y_train = df_train["cancer"] if "cancer" in df_train.columns else df_train["label"]
+        cols_to_drop = [c for c in ["cancer", "patient", "label"] if c in df_train.columns]
+        X_train = df_train.drop(columns=cols_to_drop)
 
     if balanced:
         feature_names = select_features_anova_f_balanced(X_train, y_train, k)
@@ -135,12 +150,19 @@ def run_feature_selection(
 
     f_scores = calculate_anova_f(X_train, y_train)
 
-    mean_all = X_train[y_train == 0].mean()
-    mean_aml = X_train[y_train == 1].mean()
+    # Convert labels to numeric for comparison if they are strings
+    if y_train.dtype == 'object':
+        label_map = {'ALL': 0, 'AML': 1}
+        y_numeric = y_train.map(label_map)
+    else:
+        y_numeric = y_train
+
+    mean_all = X_train[y_numeric == 0].mean()
+    mean_aml = X_train[y_numeric == 1].mean()
     favors_class = (mean_all > mean_aml).map({True: 'ALL', False: 'AML'})
 
     f_scores_df = pd.DataFrame({
-        'feature_index': f_scores.index,
+        'gene_description': f_scores.index,
         'f_score': f_scores.values,
         'favors_class': [favors_class[g] for g in f_scores.index]
     }).sort_values('f_score', ascending=False)
@@ -149,37 +171,45 @@ def run_feature_selection(
     f_scores_df = f_scores_df.head(k)
 
     if metadata is not None:
-        f_scores_df = f_scores_df.merge(metadata, on='feature_index')
+        f_scores_df = f_scores_df.merge(metadata, on='gene_description', how='left')
         f_scores_df = f_scores_df[['gene_description', 'gene_accession', 'f_score', 'favors_class']]
 
     f_scores_df.to_csv(out_path / f"top_{k}_anova_f_scores.csv", index=False)
     print(f"[INFO] F-scores saved to {out_path / f'top_{k}_anova_f_scores.csv'}")
 
     train_topk = X_train[feature_names].copy()
-    train_topk["label"] = y_train
+    train_topk["cancer"] = y_train.values
+    train_topk["patient"] = [str(i+1) for i in range(len(train_topk))]
     train_topk.to_csv(out_path / f"train_top_{k}_anova_f.csv", index=False)
+    print(f"[INFO] Train CSV saved to {out_path / f'train_top_{k}_anova_f.csv'}")
 
     if input_ind is not None:
         if needs_preprocessing:
             X_ind, y_ind, _ = preprocess_raw_data(input_ind, labels_csv)
         else:
             df_ind = pd.read_csv(input_ind)
-            y_ind = df_ind["label"]
-            X_ind = df_ind.drop(columns=["label"])
+            y_ind = df_ind["cancer"] if "cancer" in df_ind.columns else df_ind["label"]
+            cols_to_drop = [c for c in ["cancer", "patient", "label"] if c in df_ind.columns]
+            X_ind = df_ind.drop(columns=cols_to_drop)
         ind_topk = X_ind[feature_names].copy()
-        ind_topk["label"] = y_ind
+        ind_topk["cancer"] = y_ind.values
+        ind_topk["patient"] = [str(i+39) for i in range(len(ind_topk))]  # Independent set is patients 39-72
         ind_topk.to_csv(out_path / f"independent_top_{k}_anova_f.csv", index=False)
+        print(f"[INFO] Independent CSV saved to {out_path / f'independent_top_{k}_anova_f.csv'}")
 
     if input_actual is not None:
         if needs_preprocessing:
             X_act, y_act, _ = preprocess_raw_data(input_actual, labels_csv)
         else:
             df_act = pd.read_csv(input_actual)
-            y_act = df_act["label"]
-            X_act = df_act.drop(columns=["label"])
+            y_act = df_act["cancer"] if "cancer" in df_act.columns else df_act["label"]
+            cols_to_drop = [c for c in ["cancer", "patient", "label"] if c in df_act.columns]
+            X_act = df_act.drop(columns=cols_to_drop)
         act_topk = X_act[feature_names].copy()
-        act_topk["label"] = y_act
+        act_topk["cancer"] = y_act.values
+        act_topk["patient"] = [str(i+1) for i in range(len(act_topk))]
         act_topk.to_csv(out_path / f"actual_top_{k}_anova_f.csv", index=False)
+        print(f"[INFO] Actual CSV saved to {out_path / f'actual_top_{k}_anova_f.csv'}")
 
 
 def main():
