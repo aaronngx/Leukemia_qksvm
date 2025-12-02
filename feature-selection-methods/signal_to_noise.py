@@ -35,12 +35,29 @@ def load_golub_train(train_csv: str | Path, labels_csv: str | Path):
         Gene expression matrix with shape (n_genes, n_samples).
     y_train : np.ndarray
         Array of labels 'ALL' / 'AML' of length n_samples.
+    patient_ids : np.ndarray
+        Array of patient IDs.
+    gene_accessions : dict
+        Mapping from gene description to accession number.
     """
     train_csv = Path(train_csv)
     labels_csv = Path(labels_csv)
 
-    # Load expression matrix with genes as index
-    X_train_raw = pd.read_csv(train_csv, index_col=0)
+    # Load expression matrix - need both gene description and accession
+    df_raw = pd.read_csv(train_csv)
+    gene_descriptions = df_raw['Gene Description'].tolist()
+    gene_accessions_list = df_raw['Gene Accession Number'].tolist()
+    
+    # Create mapping from description to accession
+    gene_accessions = dict(zip(gene_descriptions, gene_accessions_list))
+    
+    # Set gene description as index
+    X_train_raw = df_raw.set_index('Gene Description').drop(columns=['Gene Accession Number'])
+    
+    # Remove call columns
+    call_cols = [c for c in X_train_raw.columns if c.startswith('call')]
+    X_train_raw = X_train_raw.drop(columns=call_cols, errors='ignore')
+    
     print(f"Raw X_train shape: {X_train_raw.shape}")
 
     # Remove duplicate gene names (keep first occurrence)
@@ -56,7 +73,7 @@ def load_golub_train(train_csv: str | Path, labels_csv: str | Path):
     print(f"Label columns: {labels.columns.tolist()}")
 
     # Identify ID and diagnosis columns heuristically
-    id_col_candidates = [c for c in labels.columns if "id" in c.lower() or "sample" in c.lower()]
+    id_col_candidates = [c for c in labels.columns if "id" in c.lower() or "sample" in c.lower() or "patient" in c.lower()]
     cls_col_candidates = [
         c
         for c in labels.columns
@@ -91,15 +108,45 @@ def load_golub_train(train_csv: str | Path, labels_csv: str | Path):
     X_train = X_train_raw.loc[:, common_samples]
     labels = labels[labels["sample_id"].isin(common_samples)].reset_index(drop=True)
 
-    # Create aligned label array
+    # Create aligned label and patient ID arrays
     y_train = labels.set_index("sample_id").loc[X_train.columns, "diagnosis"].values
+    patient_ids = np.array([int(s) for s in X_train.columns])
 
     print(f"\nFinal X_train shape (genes x samples): {X_train.shape}")
     print("Class distribution:")
     print(pd.Series(y_train).value_counts())
     print(f"\nFirst 5 samples: {X_train.columns[:5].tolist()}")
 
-    return X_train, y_train
+    return X_train, y_train, patient_ids, gene_accessions
+
+
+def balance_samples_snr(X: pd.DataFrame, y: np.ndarray, patient_ids: np.ndarray):
+    """Balance samples by taking equal numbers of ALL and AML patients.
+    
+    X is (genes x samples), so we select columns.
+    """
+    all_indices = np.where(y == 'ALL')[0]
+    aml_indices = np.where(y == 'AML')[0]
+    
+    n_minority = min(len(all_indices), len(aml_indices))
+    
+    # Take all from minority, first n from majority
+    if len(aml_indices) <= len(all_indices):
+        selected_aml = aml_indices
+        selected_all = all_indices[:n_minority]
+    else:
+        selected_all = all_indices
+        selected_aml = aml_indices[:n_minority]
+    
+    selected_indices = np.concatenate([selected_all, selected_aml])
+    
+    X_balanced = X.iloc[:, selected_indices]
+    y_balanced = y[selected_indices]
+    patient_ids_balanced = patient_ids[selected_indices]
+    
+    print(f"[INFO] Balanced samples: {len(selected_all)} ALL + {len(selected_aml)} AML = {len(selected_indices)} total")
+    
+    return X_balanced, y_balanced, patient_ids_balanced
 
 
 def compute_P_scores(X: pd.DataFrame, y: np.ndarray) -> pd.Series:
@@ -218,13 +265,23 @@ def load_independent_set(ind_csv: str | Path, labels_csv: str | Path):
     labels_csv = Path(labels_csv)
 
     df_raw = pd.read_csv(ind_csv)
+    
+    # Get gene accession mapping
+    gene_descriptions = df_raw['Gene Description'].tolist()
+    gene_accessions_list = df_raw['Gene Accession Number'].tolist()
+    gene_accessions = dict(zip(gene_descriptions, gene_accessions_list))
+    
     X_ind_raw = df_raw.set_index('Gene Description').drop(columns=['Gene Accession Number'])
+    
+    # Remove call columns
+    call_cols = [c for c in X_ind_raw.columns if c.startswith('call')]
+    X_ind_raw = X_ind_raw.drop(columns=call_cols, errors='ignore')
 
     if X_ind_raw.index.duplicated().any():
         X_ind_raw = X_ind_raw[~X_ind_raw.index.duplicated(keep="first")]
 
     labels = pd.read_csv(labels_csv)
-    id_col = [c for c in labels.columns if "id" in c.lower() or "sample" in c.lower()]
+    id_col = [c for c in labels.columns if "id" in c.lower() or "sample" in c.lower() or "patient" in c.lower()]
     cls_col = [c for c in labels.columns if "diag" in c.lower() or "class" in c.lower() or "type" in c.lower() or "cancer" in c.lower()]
     id_col = id_col[0] if id_col else labels.columns[0]
     cls_col = cls_col[0] if cls_col else labels.columns[1]
@@ -240,8 +297,9 @@ def load_independent_set(ind_csv: str | Path, labels_csv: str | Path):
 
     labels_ind = labels[labels["sample_id"].isin(common_samples)].reset_index(drop=True)
     y_ind = labels_ind.set_index("sample_id").loc[X_ind.columns, "diagnosis"].values
+    patient_ids = np.array([int(s) for s in X_ind.columns])
 
-    return X_ind, y_ind
+    return X_ind, y_ind, patient_ids, gene_accessions
 
 
 def run_snr_selection(
@@ -250,10 +308,20 @@ def run_snr_selection(
     train_csv: str = None,
     ind_csv: str = None,
     labels_csv: str = None,
+    use_all_data: bool = False,
+    balanced: bool = False,
 ):
-    """Run SNR feature selection and output train/test CSVs."""
-    import argparse
-
+    """Run SNR feature selection and output train/test CSVs.
+    
+    Args:
+        k: Number of top genes to select
+        out_dir: Output directory
+        train_csv: Path to training CSV
+        ind_csv: Path to independent test CSV
+        labels_csv: Path to labels CSV
+        use_all_data: If True, combine train+independent for selection and output single file
+        balanced: If True, balance samples (equal ALL/AML patients)
+    """
     out_path = Path(out_dir)
     out_path.mkdir(parents=True, exist_ok=True)
 
@@ -264,76 +332,133 @@ def run_snr_selection(
     print(f"\n=== SNR Feature Selection (K={k}) ===\n")
 
     # Load training data
-    X_train, y_train = load_golub_train(train_csv, labels_csv)
+    X_train, y_train, patient_ids, gene_accessions = load_golub_train(train_csv, labels_csv)
+    
+    # If using all data, also load and combine independent set
+    X_ind = None
+    y_ind = None
+    patient_ids_ind = None
+    if use_all_data and ind_csv and Path(ind_csv).exists():
+        print(f"[INFO] Loading independent data for combined selection...")
+        X_ind, y_ind, patient_ids_ind, gene_accessions_ind = load_independent_set(ind_csv, labels_csv)
+        # Update gene_accessions with any from independent set
+        gene_accessions.update(gene_accessions_ind)
+        # Combine train and independent (both are genes x samples)
+        X_train = pd.concat([X_train, X_ind], axis=1)
+        y_train = np.concatenate([y_train, y_ind])
+        patient_ids = np.concatenate([patient_ids, patient_ids_ind])
+        print(f"[INFO] Combined data shape: {X_train.shape}, Labels: ALL={sum(y_train=='ALL')}, AML={sum(y_train=='AML')}")
+    
+    # Balance samples if balanced mode (equal ALL and AML patients)
+    if balanced:
+        X_train, y_train, patient_ids = balance_samples_snr(X_train, y_train, patient_ids)
 
     # Compute P-scores
     P_all = compute_P_scores(X_train, y_train)
-    topk_genes = P_all.index[:k].tolist()
+    
+    # Select genes based on balanced flag
+    if balanced:
+        # Balanced gene selection: k/2 ALL-favoring (positive P) + k/2 AML-favoring (negative P)
+        if k % 2 != 0:
+            k += 1
+            print(f"[INFO] k must be even for balanced selection. Adjusted to k={k}.")
+        
+        # Get ALL-favoring genes (positive P, sorted by highest)
+        all_genes = P_all[P_all > 0].sort_values(ascending=False)
+        all_biomarkers = all_genes.index[:k//2].tolist()
+        
+        # Get AML-favoring genes (negative P, sorted by most negative)
+        aml_genes = P_all[P_all < 0].sort_values(ascending=True)
+        aml_biomarkers = aml_genes.index[:k//2].tolist()
+        
+        topk_genes = all_biomarkers + aml_biomarkers
+        print(f"[INFO] Balanced gene selection: {len(all_biomarkers)} ALL + {len(aml_biomarkers)} AML biomarkers")
+    else:
+        # Unbalanced: just top-k by |P|
+        topk_genes = P_all.index[:k].tolist()
+    
+    # Get accession numbers for selected genes
+    topk_accessions = [gene_accessions.get(g, g) for g in topk_genes]
 
-    print(f"Top-{k} genes selected by |P(g,c)|:")
+    print(f"Top-{k} genes selected:")
     for i, gene in enumerate(topk_genes[:10]):
         print(f"  {i+1}. {gene[:50]}... P={P_all[gene]:.3f}")
 
-    # Build training CSV with selected features
-    train_data = X_train.loc[topk_genes].T.copy()
-    train_data.columns = topk_genes  # Use actual gene names
-    train_data["cancer"] = y_train  # Keep as ALL/AML strings
-    train_data["patient"] = [f"{i+1}" for i in range(len(train_data))]
-    train_data.to_csv(out_path / f"train_top_{k}_snr.csv", index=False)
-    print(f"\nTrain CSV saved: {out_path / f'train_top_{k}_snr.csv'}")
+    # Output data files based on mode
+    if use_all_data:
+        # Combined mode: single output file with all data
+        all_data = X_train.loc[topk_genes].T.copy()
+        all_data.columns = topk_accessions  # Use accession numbers
+        all_data["cancer"] = y_train
+        all_data["patient"] = patient_ids
+        all_data.to_csv(out_path / f"all_top_{k}_snr.csv", index=False)
+        print(f"\nCombined CSV saved: {out_path / f'all_top_{k}_snr.csv'}")
+    else:
+        # Separate mode: train and independent files
+        train_data = X_train.loc[topk_genes].T.copy()
+        train_data.columns = topk_accessions  # Use accession numbers
+        train_data["cancer"] = y_train
+        train_data["patient"] = patient_ids
+        train_data.to_csv(out_path / f"train_top_{k}_snr.csv", index=False)
+        print(f"\nTrain CSV saved: {out_path / f'train_top_{k}_snr.csv'}")
 
-    # Load and process independent set
-    if Path(ind_csv).exists():
-        X_ind, y_ind = load_independent_set(ind_csv, labels_csv)
+        # Load and process independent set
+        if ind_csv and Path(ind_csv).exists():
+            if X_ind is None:
+                X_ind, y_ind, patient_ids_ind, _ = load_independent_set(ind_csv, labels_csv)
 
-        # Filter to selected genes
-        common_genes = [g for g in topk_genes if g in X_ind.index]
-        if len(common_genes) < k:
-            print(f"Warning: Only {len(common_genes)}/{k} genes found in independent set")
+            # Filter to selected genes
+            common_genes = [g for g in topk_genes if g in X_ind.index]
+            if len(common_genes) < k:
+                print(f"Warning: Only {len(common_genes)}/{k} genes found in independent set")
 
-        ind_data = X_ind.loc[common_genes].T.copy()
-        ind_data.columns = common_genes  # Use actual gene names
-        ind_data["cancer"] = y_ind  # Keep as ALL/AML strings
-        ind_data["patient"] = [f"{i+39}" for i in range(len(ind_data))]  # Independent set is patients 39-72
-        ind_data.to_csv(out_path / f"independent_top_{k}_snr.csv", index=False)
-        print(f"Independent CSV saved: {out_path / f'independent_top_{k}_snr.csv'}")
+            common_accessions = [gene_accessions.get(g, g) for g in common_genes]
+            
+            ind_data = X_ind.loc[common_genes].T.copy()
+            ind_data.columns = common_accessions  # Use accession numbers
+            ind_data["cancer"] = y_ind
+            ind_data["patient"] = patient_ids_ind
+            ind_data.to_csv(out_path / f"independent_top_{k}_snr.csv", index=False)
+            print(f"Independent CSV saved: {out_path / f'independent_top_{k}_snr.csv'}")
 
     # Build scores dataframe
     scores_df = pd.DataFrame({
         "gene_description": topk_genes,
+        "gene_accession": topk_accessions,
         "snr_score": [P_all[g] for g in topk_genes],
         "favors_class": ["ALL" if P_all[g] > 0 else "AML" for g in topk_genes],
     })
 
     # Split by class for ranking
-    all_genes = scores_df[scores_df['favors_class'] == 'ALL'].copy()
-    aml_genes = scores_df[scores_df['favors_class'] == 'AML'].copy()
+    all_genes_df = scores_df[scores_df['favors_class'] == 'ALL'].copy()
+    aml_genes_df = scores_df[scores_df['favors_class'] == 'AML'].copy()
 
     # Assign rank within each class (based on absolute SNR score)
-    all_genes = all_genes.sort_values('snr_score', ascending=False)
-    aml_genes = aml_genes.sort_values('snr_score', ascending=True)  # More negative = higher rank
+    all_genes_df = all_genes_df.sort_values('snr_score', ascending=False)
+    aml_genes_df = aml_genes_df.sort_values('snr_score', ascending=True)  # More negative = higher rank
 
-    all_genes['rank_within_class'] = range(1, len(all_genes) + 1)
-    aml_genes['rank_within_class'] = range(1, len(aml_genes) + 1)
+    all_genes_df['rank_within_class'] = range(1, len(all_genes_df) + 1)
+    aml_genes_df['rank_within_class'] = range(1, len(aml_genes_df) + 1)
 
     # Combine and sort by absolute SNR score for overall ranking
-    scores_df = pd.concat([all_genes, aml_genes])
+    scores_df = pd.concat([all_genes_df, aml_genes_df])
     scores_df = scores_df.assign(abs_snr=lambda x: x['snr_score'].abs()).sort_values('abs_snr', ascending=False)
     scores_df['overall_rank'] = range(1, len(scores_df) + 1)
     scores_df = scores_df.drop(columns=['abs_snr'])
 
     print(f"[INFO] SNR-based selection rankings:")
-    print(f"  - ALL genes: {len(all_genes)} genes with positive SNR")
-    print(f"  - AML genes: {len(aml_genes)} genes with negative SNR")
+    print(f"  - ALL genes: {len(all_genes_df)} genes with positive SNR")
+    print(f"  - AML genes: {len(aml_genes_df)} genes with negative SNR")
 
     # FILE 1: Full details with rankings and scores
-    topk_output = scores_df[['overall_rank', 'rank_within_class', 'gene_description', 'snr_score', 'favors_class']]
+    topk_output = scores_df[['overall_rank', 'rank_within_class', 'gene_description', 'gene_accession', 'snr_score', 'favors_class']]
     topk_output.to_csv(out_path / f"topk_snr_{k}genes.csv", index=False)
     print(f"[INFO] Top-k details saved to {out_path / f'topk_snr_{k}genes.csv'}")
 
-    # FILE 2: Selected genes only (just gene description)
-    selected_genes = pd.DataFrame({'gene_description': scores_df['gene_description']})
-    selected_genes.to_csv(out_path / f"selected_genes_snr_{k}genes.csv", index=False)
+    # FILE 2: Selected genes only (just accession numbers, one per line, no header)
+    with open(out_path / f"selected_genes_snr_{k}genes.csv", 'w') as f:
+        for acc in topk_accessions:
+            f.write(f"{acc}\n")
     print(f"[INFO] Selected genes saved to {out_path / f'selected_genes_snr_{k}genes.csv'}")
 
 
@@ -346,6 +471,16 @@ def main():
     parser.add_argument("--train_csv", default=None, help="Training CSV path")
     parser.add_argument("--ind_csv", default=None, help="Independent test CSV path")
     parser.add_argument("--labels_csv", default=None, help="Labels CSV path")
+    parser.add_argument(
+        "--use_all_data",
+        action="store_true",
+        help="Combine train and independent data for feature selection (outputs single file)",
+    )
+    parser.add_argument(
+        "--balanced",
+        action="store_true",
+        help="Balance samples (equal ALL/AML patients)",
+    )
     args = parser.parse_args()
 
     run_snr_selection(
@@ -354,6 +489,8 @@ def main():
         train_csv=args.train_csv,
         ind_csv=args.ind_csv,
         labels_csv=args.labels_csv,
+        use_all_data=args.use_all_data,
+        balanced=args.balanced,
     )
 
 
