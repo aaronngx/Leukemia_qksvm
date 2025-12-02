@@ -13,7 +13,7 @@ import joblib
 from qiskit import QuantumCircuit
 
 from angle_encoding import angle_encoding_circuit
-from amplitude_encoding import amplitude_encoding_circuit as amp_encoding_circuit
+from amplitude_encoding import amplitude_encoding_feature_map as amp_encoding_circuit
 from backend_config import (
     BackendType,
     KernelMethod,
@@ -106,14 +106,19 @@ def build_kernel(
             if backend_type == BackendType.TENSOR_NETWORK:
                 print(f"[INFO] Max bond dimension: {max_bond_dimension}")
 
+    # Number of parameters may differ from qubits (e.g., amplitude encoding)
+    n_params = len(x_params)
+    
     for i, x in enumerate(XA):
         if verbose and (i % 5 == 0 or i == nA - 1):
             progress = ((i + 1) * nB) / total_elements * 100
             print(f"  Progress: {i+1}/{nA} rows ({progress:.1f}%)")
 
         for j, z in enumerate(XB):
-            bind_x = {x_params[k]: float(x[k]) for k in range(n_qubits)}
-            bind_z = {x_params[k]: float(z[k]) for k in range(n_qubits)}
+            # Bind all parameters (use min to handle edge cases)
+            n_to_bind = min(n_params, len(x))
+            bind_x = {x_params[k]: float(x[k]) for k in range(n_to_bind)}
+            bind_z = {x_params[k]: float(z[k]) for k in range(n_to_bind)}
 
             if kernel_method == KernelMethod.SWAP_TEST:
                 # Swap test needs separate circuits for |φ(x)> and |φ(z)>

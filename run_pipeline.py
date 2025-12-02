@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """
-Unified Pipeline: Preprocessing → Quantum Encoding
+Unified Pipeline: Preprocessing → Quantum Encoding → QKSVM
 
-Connects feature selection with quantum encoding methods:
+Connects feature selection with quantum encoding and classification:
 1. Run preprocessing to select genes
 2. Load selected gene data
 3. Apply amplitude and/or angle encoding
+4. Train QKSVM classifier
 """
 
 import sys
@@ -25,6 +26,12 @@ from amplitude_encoding import (
     train_amplitude_vqc
 )
 from angle_encoding import angle_encoding_circuit
+from qksvm_golub import (
+    train_eval_qksvm,
+    EncodingType,
+    scale_to_angle
+)
+from backend_config import BackendType, KernelMethod
 
 
 # ============================================================
@@ -134,7 +141,7 @@ def load_selected_data(data_file: Path):
 
 
 # ============================================================
-# Step 3: Quantum Encoding
+# Step 3: Quantum Encoding & Classification
 # ============================================================
 def select_encoding_method():
     """Ask which encoding method to use."""
@@ -143,6 +150,21 @@ def select_encoding_method():
     print("  1. Amplitude Encoding (logarithmic qubit scaling)")
     print("  2. Angle Encoding (linear qubit scaling)")
     print("  3. Both (compare methods)")
+    
+    while True:
+        choice = input("  -> ").strip()
+        if choice in ["1", "2", "3"]:
+            return int(choice)
+        print("  [ERROR] Please enter 1, 2, or 3")
+
+
+def select_classifier():
+    """Ask which classifier to use."""
+    print("\n[STEP 4] SELECT CLASSIFIER")
+    print("-" * 50)
+    print("  1. QKSVM (Quantum Kernel SVM)")
+    print("  2. VQC (Variational Quantum Classifier)")
+    print("  3. Circuit visualization only (no training)")
     
     while True:
         choice = input("  -> ").strip()
@@ -223,6 +245,53 @@ def compare_encodings(num_features):
     print()
 
 
+def run_qksvm(X, y, num_features, encoding_type_str):
+    """Run QKSVM with selected encoding."""
+    print("\n" + "=" * 60)
+    print("QUANTUM KERNEL SVM (QKSVM)")
+    print("=" * 60)
+    
+    # Convert encoding string to EncodingType
+    if encoding_type_str == "amplitude":
+        encoding = EncodingType.AMPLITUDE
+        n_qubits = get_num_qubits(num_features)
+    else:
+        encoding = EncodingType.ANGLE
+        n_qubits = num_features
+    
+    print(f"\nEncoding: {encoding_type_str}")
+    print(f"Qubits: {n_qubits}")
+    print(f"Samples: {len(X)}")
+    print(f"Features: {num_features}")
+    
+    # Check if qubits is reasonable for simulation
+    if n_qubits > 20:
+        print(f"\n[WARNING] {n_qubits} qubits requires significant computation.")
+        print("  Consider using amplitude encoding for fewer qubits.")
+        proceed = input("  Continue anyway? (y/n): ").lower().strip()
+        if proceed not in ["y", "yes"]:
+            return None
+    
+    print("\nRunning QKSVM training...")
+    print("This may take a few minutes depending on the data size.\n")
+    
+    try:
+        train_eval_qksvm(
+            X, y,
+            ind_data=None,  # No separate test set for combined data
+            test_size=0.3,
+            seed=42,
+            output_dir="results_qksvm",
+            encoding_type=encoding,
+            kernel_method=KernelMethod.STATEVECTOR,
+            backend_type=BackendType.STATEVECTOR,
+        )
+        return {"success": True, "encoding": encoding_type_str, "n_qubits": n_qubits}
+    except Exception as e:
+        print(f"\n[ERROR] QKSVM failed: {e}")
+        return {"success": False, "error": str(e)}
+
+
 # ============================================================
 # Main Pipeline
 # ============================================================
@@ -265,13 +334,37 @@ def run_pipeline():
     # Step 3: Encoding
     encoding_choice = select_encoding_method()
     
+    # Step 4: Classifier
+    classifier_choice = select_classifier()
+    
     results = {}
     
-    if encoding_choice in [1, 3]:
-        results["amplitude"] = run_amplitude_encoding(X, y, num_features)
+    # Determine encoding type string
+    if encoding_choice == 1:
+        encoding_types = ["amplitude"]
+    elif encoding_choice == 2:
+        encoding_types = ["angle"]
+    else:
+        encoding_types = ["amplitude", "angle"]
     
-    if encoding_choice in [2, 3]:
-        results["angle"] = run_angle_encoding(X, y, num_features)
+    # Run based on classifier choice
+    if classifier_choice == 1:  # QKSVM
+        for enc_type in encoding_types:
+            print(f"\n--- Running QKSVM with {enc_type} encoding ---")
+            results[f"qksvm_{enc_type}"] = run_qksvm(X, y, num_features, enc_type)
+    
+    elif classifier_choice == 2:  # VQC
+        for enc_type in encoding_types:
+            if enc_type == "amplitude":
+                results["amplitude"] = run_amplitude_encoding(X, y, num_features)
+            else:
+                results["angle"] = run_angle_encoding(X, y, num_features)
+    
+    else:  # Visualization only
+        if encoding_choice in [1, 3]:
+            results["amplitude"] = run_amplitude_encoding(X, y, num_features)
+        if encoding_choice in [2, 3]:
+            results["angle"] = run_angle_encoding(X, y, num_features)
     
     if encoding_choice == 3:
         compare_encodings(num_features)
@@ -293,6 +386,14 @@ def run_pipeline():
     if "angle" in results:
         print(f"\nAngle Encoding:")
         print(f"  - Qubits: {results['angle']['n_qubits']}")
+    
+    for key in results:
+        if key.startswith("qksvm_") and results[key] and results[key].get("success"):
+            enc = results[key]["encoding"]
+            qubits = results[key]["n_qubits"]
+            print(f"\nQKSVM ({enc}):")
+            print(f"  - Qubits: {qubits}")
+            print(f"  - Results saved to: results_qksvm/")
     
     print()
     
