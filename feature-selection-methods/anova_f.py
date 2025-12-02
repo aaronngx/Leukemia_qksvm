@@ -161,21 +161,64 @@ def run_feature_selection(
     mean_aml = X_train[y_numeric == 1].mean()
     favors_class = (mean_all > mean_aml).map({True: 'ALL', False: 'AML'})
 
+    # Filter to only the selected features
+    f_scores_selected = f_scores.loc[feature_names]
+    favors_class_selected = favors_class.loc[feature_names]
+
     f_scores_df = pd.DataFrame({
-        'gene_description': f_scores.index,
-        'f_score': f_scores.values,
-        'favors_class': [favors_class[g] for g in f_scores.index]
+        'gene_description': f_scores_selected.index,
+        'f_score': f_scores_selected.values,
+        'favors_class': favors_class_selected.values
     }).sort_values('f_score', ascending=False)
 
-    # Keep only top-k genes
-    f_scores_df = f_scores_df.head(k)
+    # Add rankings based on mode
+    if balanced:
+        # For balanced: rank within each class
+        all_genes = f_scores_df[f_scores_df['favors_class'] == 'ALL'].copy()
+        aml_genes = f_scores_df[f_scores_df['favors_class'] == 'AML'].copy()
 
+        all_genes['rank_within_class'] = range(1, len(all_genes) + 1)
+        aml_genes['rank_within_class'] = range(1, len(aml_genes) + 1)
+
+        # Combine and add overall rank
+        f_scores_df = pd.concat([all_genes, aml_genes]).sort_values('f_score', ascending=False)
+        f_scores_df['overall_rank'] = range(1, len(f_scores_df) + 1)
+
+        print(f"[INFO] Balanced selection rankings:")
+        print(f"  - ALL genes: ranks 1-{len(all_genes)} within ALL class")
+        print(f"  - AML genes: ranks 1-{len(aml_genes)} within AML class")
+    else:
+        # For non-balanced: just overall rank
+        f_scores_df['rank'] = range(1, len(f_scores_df) + 1)
+
+    # Prepare output with metadata
     if metadata is not None:
         f_scores_df = f_scores_df.merge(metadata, on='gene_description', how='left')
-        f_scores_df = f_scores_df[['gene_description', 'gene_accession', 'f_score', 'favors_class']]
+        if balanced:
+            topk_output = f_scores_df[['overall_rank', 'rank_within_class', 'gene_description',
+                                         'gene_accession', 'f_score', 'favors_class']]
+        else:
+            topk_output = f_scores_df[['rank', 'gene_description', 'gene_accession',
+                                         'f_score', 'favors_class']]
+    else:
+        if balanced:
+            topk_output = f_scores_df[['overall_rank', 'rank_within_class', 'gene_description',
+                                         'f_score', 'favors_class']]
+        else:
+            topk_output = f_scores_df[['rank', 'gene_description', 'f_score', 'favors_class']]
 
-    f_scores_df.to_csv(out_path / f"top_{k}_anova_f_scores.csv", index=False)
-    print(f"[INFO] F-scores saved to {out_path / f'top_{k}_anova_f_scores.csv'}")
+    # FILE 1: Full details with rankings and scores
+    topk_output.to_csv(out_path / f"topk_anova_f_{k}genes.csv", index=False)
+    print(f"[INFO] Top-k details saved to {out_path / f'topk_anova_f_{k}genes.csv'}")
+
+    # FILE 2: Selected genes only (just gene description and accession)
+    if metadata is not None:
+        selected_genes = f_scores_df[['gene_description', 'gene_accession']].copy()
+    else:
+        selected_genes = pd.DataFrame({'gene_description': f_scores_df['gene_description']})
+
+    selected_genes.to_csv(out_path / f"selected_genes_anova_f_{k}genes.csv", index=False)
+    print(f"[INFO] Selected genes saved to {out_path / f'selected_genes_anova_f_{k}genes.csv'}")
 
     train_topk = X_train[feature_names].copy()
     train_topk["cancer"] = y_train.values

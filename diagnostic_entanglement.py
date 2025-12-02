@@ -292,6 +292,7 @@ def print_diagnostic_report(analysis: Dict, verbose: bool = True) -> None:
         print(f"  Expected CNOTs: {len(analysis['expected_connections'])}")
 
         if cfg['entanglement'] == 'linear':
+            n_qubits = cfg['n_qubits']
             print(f"  Should be: Nearest-neighbor chain (q0->q1, q1->q2, ... q{n_qubits-2}->q{n_qubits-1})")
 
     # Verification results

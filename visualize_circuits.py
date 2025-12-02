@@ -14,7 +14,8 @@ from qiskit import QuantumCircuit
 from qiskit.circuit.library import TwoLocal
 
 from angle_encoding import angle_encoding_circuit
-from amplitude_encoding import get_num_qubits, encode_amplitude
+from amplitude_encoding import get_num_qubits, amplitude_encoding_feature_map
+from diagnostic_entanglement import analyze_ansatz_entanglement, print_diagnostic_report
 
 
 def analyze_circuit(qc: QuantumCircuit, name: str):
@@ -91,9 +92,8 @@ def visualize_amplitude_encoding(k: int = 16):
     print(f"AMPLITUDE ENCODING (K={k} features -> {n_qubits} qubits)")
     print("="*70)
 
-    # Create example with random data
-    x = np.random.randn(k)
-    qc = encode_amplitude(x)
+    # Create amplitude encoding feature map
+    qc, _ = amplitude_encoding_feature_map(k)
 
     # Decompose to see actual gates
     qc_decomposed = qc.decompose().decompose()
@@ -149,6 +149,11 @@ def visualize_vqc_ansatz(n_qubits: int = 4, reps: int = 2):
         print(str(diagram).encode('ascii', errors='replace').decode('ascii'))
     except Exception as e:
         print(f"  (Diagram display error: {e})")
+
+    # Add entanglement pattern verification
+    print(f"\n[Entanglement Pattern Verification]")
+    analysis = analyze_ansatz_entanglement(n_qubits, reps, entanglement="linear")
+    print_diagnostic_report(analysis, verbose=False)  # Brief summary
 
     return ansatz
 

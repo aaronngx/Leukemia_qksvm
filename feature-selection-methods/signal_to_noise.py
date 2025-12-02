@@ -298,14 +298,43 @@ def run_snr_selection(
         ind_data.to_csv(out_path / f"independent_top_{k}_snr.csv", index=False)
         print(f"Independent CSV saved: {out_path / f'independent_top_{k}_snr.csv'}")
 
-    # Save gene scores
+    # Build scores dataframe
     scores_df = pd.DataFrame({
         "gene_description": topk_genes,
         "snr_score": [P_all[g] for g in topk_genes],
         "favors_class": ["ALL" if P_all[g] > 0 else "AML" for g in topk_genes],
     })
-    scores_df.to_csv(out_path / f"top_{k}_snr_scores.csv", index=False)
-    print(f"Scores CSV saved: {out_path / f'top_{k}_snr_scores.csv'}")
+
+    # Split by class for ranking
+    all_genes = scores_df[scores_df['favors_class'] == 'ALL'].copy()
+    aml_genes = scores_df[scores_df['favors_class'] == 'AML'].copy()
+
+    # Assign rank within each class (based on absolute SNR score)
+    all_genes = all_genes.sort_values('snr_score', ascending=False)
+    aml_genes = aml_genes.sort_values('snr_score', ascending=True)  # More negative = higher rank
+
+    all_genes['rank_within_class'] = range(1, len(all_genes) + 1)
+    aml_genes['rank_within_class'] = range(1, len(aml_genes) + 1)
+
+    # Combine and sort by absolute SNR score for overall ranking
+    scores_df = pd.concat([all_genes, aml_genes])
+    scores_df = scores_df.assign(abs_snr=lambda x: x['snr_score'].abs()).sort_values('abs_snr', ascending=False)
+    scores_df['overall_rank'] = range(1, len(scores_df) + 1)
+    scores_df = scores_df.drop(columns=['abs_snr'])
+
+    print(f"[INFO] SNR-based selection rankings:")
+    print(f"  - ALL genes: {len(all_genes)} genes with positive SNR")
+    print(f"  - AML genes: {len(aml_genes)} genes with negative SNR")
+
+    # FILE 1: Full details with rankings and scores
+    topk_output = scores_df[['overall_rank', 'rank_within_class', 'gene_description', 'snr_score', 'favors_class']]
+    topk_output.to_csv(out_path / f"topk_snr_{k}genes.csv", index=False)
+    print(f"[INFO] Top-k details saved to {out_path / f'topk_snr_{k}genes.csv'}")
+
+    # FILE 2: Selected genes only (just gene description)
+    selected_genes = pd.DataFrame({'gene_description': scores_df['gene_description']})
+    selected_genes.to_csv(out_path / f"selected_genes_snr_{k}genes.csv", index=False)
+    print(f"[INFO] Selected genes saved to {out_path / f'selected_genes_snr_{k}genes.csv'}")
 
 
 def main():
