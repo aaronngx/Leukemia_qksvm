@@ -35,8 +35,8 @@ def print_separator():
 
 
 def ask_gene_count():
-    """Ask how many genes to select."""
-    print("[1/3] How many genes/qubits to select?")
+    """Ask how many genes to select and whether to balance them."""
+    print("[1/4] How many genes/qubits to select?")
     print("      (Common: 16, 24, 32, 50)")
     print("      (Golub used 50 genes: 25 ALL + 25 AML)")
 
@@ -49,7 +49,22 @@ def ask_gene_count():
             if k > 7129:  # Total genes in dataset
                 print("      [ERROR] Maximum 7129 genes (total in dataset)")
                 continue
-            return k
+
+            # Sub-question: balance genes?
+            print()
+            print("      Balance gene selection?")
+            print("      y = Yes (k/2 ALL-favoring + k/2 AML-favoring)")
+            print("      n = No (pure top-k by score)")
+
+            while True:
+                balance_choice = input("      -> (y/n): ").lower().strip()
+                if balance_choice in ["y", "yes"]:
+                    return k, True
+                elif balance_choice in ["n", "no"]:
+                    return k, False
+                else:
+                    print("      [ERROR] Please enter 'y' or 'n'")
+
         except ValueError:
             print("      [ERROR] Please enter a valid integer")
         except KeyboardInterrupt:
@@ -59,7 +74,7 @@ def ask_gene_count():
 
 def ask_method():
     """Ask which feature selection method to use."""
-    print("\n[2/3] Feature selection method:")
+    print("\n[2/4] Feature selection method:")
     print("      1. ANOVA F-test")
     print("      2. SNR (Signal-to-Noise Ratio / Golub's P-score)")
     print("      3. Both methods")
@@ -76,49 +91,86 @@ def ask_method():
             sys.exit(0)
 
 
-def ask_balanced():
-    """Ask whether to use balanced gene selection."""
-    print("\n[3/3] Use balanced gene selection?")
-    print("      y = Yes (k/2 ALL-favoring + k/2 AML-favoring)")
-    print("      n = No (pure top-k by score)")
-    print()
-    print("      Note: Golub used balanced selection (25+25=50)")
+def ask_patient_count():
+    """Ask how many patients to use for training."""
+    print("\n[3/4] Patient samples:")
+    print("      1. All 38 patients (27 ALL + 11 AML) - imbalanced")
+    print("      2. Balanced 22 patients (11 ALL + 11 AML)")
 
     while True:
         try:
-            choice = input("      -> (y/n): ").lower().strip()
-            if choice in ["y", "yes"]:
-                return True
-            elif choice in ["n", "no"]:
-                return False
+            choice = input("      -> ")
+            if choice == "1":
+                return False  # use_all_patients
+            elif choice == "2":
+                return True   # use_balanced_patients
             else:
-                print("      [ERROR] Please enter 'y' or 'n'")
+                print("      [ERROR] Please enter 1 or 2")
         except KeyboardInterrupt:
             print("\n\n[INFO] Cancelled by user")
             sys.exit(0)
 
 
-def print_config(k: int, method: int, balanced: bool):
+def ask_validation_strategy():
+    """Ask which internal validation strategy to use."""
+    print("\n[4/4] Internal validation strategy:")
+    print("      1. Train/test split")
+    print("         a. 70/30 split")
+    print("         b. 80/20 split")
+    print("      2. Cross-validation")
+    print("         a. 5-fold CV")
+    print("         b. 10-fold CV")
+
+    while True:
+        try:
+            choice = input("      -> (1a/1b/2a/2b): ").lower().strip()
+            if choice == "1a":
+                return {"method": "split", "ratio": 0.7}
+            elif choice == "1b":
+                return {"method": "split", "ratio": 0.8}
+            elif choice == "2a":
+                return {"method": "cv", "folds": 5}
+            elif choice == "2b":
+                return {"method": "cv", "folds": 10}
+            else:
+                print("      [ERROR] Please enter 1a, 1b, 2a, or 2b")
+        except KeyboardInterrupt:
+            print("\n\n[INFO] Cancelled by user")
+            sys.exit(0)
+
+
+def print_config(k: int, balanced_genes: bool, method: int, use_balanced_patients: bool, validation_strategy: dict):
     """Print configuration summary."""
     print()
     print_separator()
     print("  Configuration Summary:")
     print(f"  • Genes/Qubits: {k}")
-    
+
+    if balanced_genes:
+        print(f"  • Gene Balance: Yes ({k//2} ALL + {k//2} AML)")
+    else:
+        print(f"  • Gene Balance: No (pure top-k by score)")
+
     method_names = {1: "ANOVA F-test", 2: "SNR (Golub P-score)", 3: "ANOVA + SNR"}
     print(f"  • Method: {method_names[method]}")
-    
-    balance_str = f"Yes ({k//2} ALL + {k//2} AML)" if balanced else "No (top-k by score)"
-    print(f"  • Gene Balance: {balance_str}")
-    
+
+    if use_balanced_patients:
+        print(f"  • Patients: Balanced 22 (11 ALL + 11 AML)")
+    else:
+        print(f"  • Patients: All 38 (27 ALL + 11 AML) - imbalanced")
+
+    if validation_strategy["method"] == "split":
+        ratio = validation_strategy["ratio"]
+        print(f"  • Validation: Train/test split ({int(ratio*100)}/{int((1-ratio)*100)})")
+    else:
+        folds = validation_strategy["folds"]
+        print(f"  • Validation: {folds}-fold cross-validation")
+
     print()
     print("  Data Strategy (Golub Methodology):")
-    print("  • Gene selection: Training set ONLY (38 samples)")
-    print("    - 27 ALL patients")
-    print("    - 11 AML patients")
-    print("  • Independent test: Validation ONLY (34 samples)")
-    print("    - Never used for gene selection")
-    print("    - Used only to test predictor accuracy")
+    print("  • Gene selection: Selected patients ONLY (38 or 22)")
+    print("  • Internal validation: From selected patients")
+    print("  • Independent test: Completely separate (34 samples)")
     print_separator()
     print()
 
@@ -128,12 +180,13 @@ def run_preprocessing():
     print_banner()
 
     # Get user inputs
-    k = ask_gene_count()
+    k, balanced_genes = ask_gene_count()  # Returns tuple now
     method = ask_method()
-    balanced = ask_balanced()
+    use_balanced_patients = ask_patient_count()
+    validation_strategy = ask_validation_strategy()
 
     # Show configuration
-    print_config(k, method, balanced)
+    print_config(k, balanced_genes, method, use_balanced_patients, validation_strategy)
 
     # Set paths
     data_dir = Path("data/raw")
@@ -161,7 +214,9 @@ def run_preprocessing():
                 input_actual=None,
                 k=k,
                 out_dir=out_dir,
-                balanced=balanced,
+                balanced_genes=balanced_genes,  # NEW param
+                use_balanced_patients=use_balanced_patients,  # NEW param
+                validation_strategy=validation_strategy,  # NEW param
                 labels_csv=str(labels_csv),
                 use_all_data=False,  # ALWAYS False - training only!
             )
@@ -179,7 +234,9 @@ def run_preprocessing():
                 ind_csv=str(ind_csv) if ind_csv.exists() else None,
                 labels_csv=str(labels_csv),
                 use_all_data=False,  # ALWAYS False - training only!
-                balanced=balanced,
+                balanced_genes=balanced_genes,  # NEW param
+                use_balanced_patients=use_balanced_patients,  # NEW param
+                validation_strategy=validation_strategy,  # NEW param
             )
             print("✓ SNR complete\n")
 
@@ -189,10 +246,30 @@ def run_preprocessing():
         print_separator()
         print()
         print("Methodology Summary:")
-        print("  • Genes selected from: 38 training samples ONLY")
-        print("  • Selected genes applied to:")
-        print("    - Training set (38 samples) → for model building")
-        print("    - Independent test (34 samples) → for validation")
+        if use_balanced_patients:
+            print("  • Patients selected: 22 balanced (11 ALL + 11 AML)")
+        else:
+            print("  • Patients selected: 38 all (27 ALL + 11 AML)")
+        print("  • Genes selected from: Selected patients ONLY")
+        if balanced_genes:
+            print(f"  • Gene selection method: Balanced ({k//2} ALL + {k//2} AML)")
+        else:
+            print("  • Gene selection method: Pure top-k by score")
+        print()
+
+        if validation_strategy["method"] == "split":
+            ratio = validation_strategy["ratio"]
+            print(f"  • Internal split: {int(ratio*100)}/{int((1-ratio)*100)} train/test")
+            print("    - train_internal_*.csv → for model training")
+            print("    - test_internal_*.csv → for hyperparameter tuning")
+        else:
+            folds = validation_strategy["folds"]
+            print(f"  • Cross-validation: {folds}-fold stratified CV")
+            print(f"    - fold_1_train_*.csv through fold_{folds}_train_*.csv")
+            print(f"    - fold_1_test_*.csv through fold_{folds}_test_*.csv")
+
+        print("  • Independent test: Completely separate (34 samples)")
+        print("    - independent_*.csv → for final validation ONLY")
         print()
         print("Output files in 'results/':")
 
@@ -202,11 +279,15 @@ def run_preprocessing():
             print(f"        - Full rankings, F-scores, class favorability")
             print(f"    • selected_genes_anova_f_{k}genes.csv")
             print(f"        - Gene accession numbers (for reference)")
-            print(f"    • train_top_{k}_anova_f.csv")
-            print(f"        - Training data: 38 samples × {k} genes")
+            if validation_strategy["method"] == "split":
+                print(f"    • train_internal_top_{k}_anova_f.csv")
+                print(f"    • test_internal_top_{k}_anova_f.csv")
+            else:
+                folds = validation_strategy["folds"]
+                print(f"    • fold_1_train/test through fold_{folds}_train/test (top_{k}_anova_f.csv)")
             if ind_csv.exists():
                 print(f"    • independent_top_{k}_anova_f.csv")
-                print(f"        - Test data: 34 samples × {k} genes (same genes!)")
+                print(f"        - Independent: 34 samples × {k} genes")
 
         if method in [2, 3]:
             print(f"\n  SNR (Signal-to-Noise):")
@@ -214,17 +295,28 @@ def run_preprocessing():
             print(f"        - Full rankings, P-scores, class favorability")
             print(f"    • selected_genes_snr_{k}genes.csv")
             print(f"        - Gene accession numbers (for reference)")
-            print(f"    • train_top_{k}_snr.csv")
-            print(f"        - Training data: 38 samples × {k} genes")
+            if validation_strategy["method"] == "split":
+                print(f"    • train_internal_top_{k}_snr.csv")
+                print(f"    • test_internal_top_{k}_snr.csv")
+            else:
+                folds = validation_strategy["folds"]
+                print(f"    • fold_1_train/test through fold_{folds}_train/test (top_{k}_snr.csv)")
             if ind_csv.exists():
                 print(f"    • independent_top_{k}_snr.csv")
-                print(f"        - Test data: 34 samples × {k} genes (same genes!)")
+                print(f"        - Independent: 34 samples × {k} genes")
 
         print()
         print("Next Steps:")
-        print("  1. Use train_*.csv to build your classifier")
-        print("  2. Test classifier on independent_*.csv for validation")
-        print("  3. Report accuracy on independent set as final result")
+        if validation_strategy["method"] == "split":
+            print("  1. Use train_internal_*.csv to build your classifier")
+            print("  2. Tune hyperparameters using test_internal_*.csv")
+            print("  3. Test final model on independent_*.csv for validation")
+            print("  4. Report accuracy on independent set as final result")
+        else:
+            print("  1. Use CV folds (fold_*_train/test) for model training and validation")
+            print("  2. Tune hyperparameters using CV results")
+            print("  3. Test final model on independent_*.csv for validation")
+            print("  4. Report accuracy on independent set as final result")
         print()
 
     except Exception as e:

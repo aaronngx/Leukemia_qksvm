@@ -120,9 +120,10 @@ def load_golub_train(train_csv: str | Path, labels_csv: str | Path):
     return X_train, y_train, patient_ids, gene_accessions
 
 
-def balance_samples_snr(X: pd.DataFrame, y: np.ndarray, patient_ids: np.ndarray):
+def balance_patient_samples_snr(X: pd.DataFrame, y: np.ndarray, patient_ids: np.ndarray):
     """Balance samples by taking equal numbers of ALL and AML patients.
-    
+
+    NOTE: This balances PATIENTS (samples/data points), NOT genes (features).
     X is (genes x samples), so we select columns.
     """
     all_indices = np.where(y == 'ALL')[0]
@@ -302,6 +303,66 @@ def load_independent_set(ind_csv: str | Path, labels_csv: str | Path):
     return X_ind, y_ind, patient_ids, gene_accessions
 
 
+def split_train_test(
+    X: pd.DataFrame,
+    y: np.ndarray,
+    patient_ids: np.ndarray,
+    test_ratio: float
+):
+    """Split data into internal train and test sets (stratified).
+
+    Note: X is (samples x genes) for this function (transposed from main SNR format).
+    """
+    from sklearn.model_selection import train_test_split
+
+    indices = np.arange(len(X))
+    train_idx, test_idx = train_test_split(
+        indices,
+        test_size=test_ratio,
+        stratify=y,
+        random_state=42
+    )
+
+    X_train = X.iloc[train_idx].reset_index(drop=True)
+    y_train = y[train_idx]
+    patient_ids_train = patient_ids[train_idx]
+
+    X_test = X.iloc[test_idx].reset_index(drop=True)
+    y_test = y[test_idx]
+    patient_ids_test = patient_ids[test_idx]
+
+    return X_train, y_train, patient_ids_train, X_test, y_test, patient_ids_test
+
+
+def split_cross_validation(
+    X: pd.DataFrame,
+    y: np.ndarray,
+    patient_ids: np.ndarray,
+    n_folds: int
+):
+    """Split data into k-fold cross-validation sets (stratified).
+
+    Note: X is (samples x genes) for this function (transposed from main SNR format).
+    """
+    from sklearn.model_selection import StratifiedKFold
+
+    skf = StratifiedKFold(n_splits=n_folds, shuffle=True, random_state=42)
+    folds = []
+
+    for train_idx, test_idx in skf.split(X, y):
+        X_train = X.iloc[train_idx].reset_index(drop=True)
+        y_train = y[train_idx]
+        patient_ids_train = patient_ids[train_idx]
+
+        X_test = X.iloc[test_idx].reset_index(drop=True)
+        y_test = y[test_idx]
+        patient_ids_test = patient_ids[test_idx]
+
+        folds.append((X_train, y_train, patient_ids_train, X_test, y_test, patient_ids_test))
+
+    return folds
+
+
 def run_snr_selection(
     k: int,
     out_dir: str = "results",
@@ -309,10 +370,12 @@ def run_snr_selection(
     ind_csv: str = None,
     labels_csv: str = None,
     use_all_data: bool = False,
-    balanced: bool = False,
+    balanced_genes: bool = False,  # NEW - gene balance only
+    use_balanced_patients: bool = False,  # NEW - sample balance only
+    validation_strategy: dict | None = None,  # NEW - {"method": "split", "ratio": 0.7} or {"method": "cv", "folds": 5}
 ):
     """Run SNR feature selection and output train/test CSVs.
-    
+
     Args:
         k: Number of top genes to select
         out_dir: Output directory
@@ -320,7 +383,9 @@ def run_snr_selection(
         ind_csv: Path to independent test CSV
         labels_csv: Path to labels CSV
         use_all_data: If True, combine train+independent for selection and output single file
-        balanced: If True, balance samples (equal ALL/AML patients)
+        balanced_genes: Select k/2 ALL-favoring + k/2 AML-favoring genes
+        use_balanced_patients: Balance patient samples (11 ALL + 11 AML)
+        validation_strategy: Internal validation config (train/test split or CV)
     """
     out_path = Path(out_dir)
     out_path.mkdir(parents=True, exist_ok=True)
@@ -349,15 +414,15 @@ def run_snr_selection(
         patient_ids = np.concatenate([patient_ids, patient_ids_ind])
         print(f"[INFO] Combined data shape: {X_train.shape}, Labels: ALL={sum(y_train=='ALL')}, AML={sum(y_train=='AML')}")
     
-    # Balance samples if balanced mode (equal ALL and AML patients)
-    if balanced:
-        X_train, y_train, patient_ids = balance_samples_snr(X_train, y_train, patient_ids)
+    # Balance patient samples if requested (equal ALL and AML patients)
+    if use_balanced_patients:
+        X_train, y_train, patient_ids = balance_patient_samples_snr(X_train, y_train, patient_ids)
 
     # Compute P-scores
     P_all = compute_P_scores(X_train, y_train)
-    
-    # Select genes based on balanced flag
-    if balanced:
+
+    # Select genes based on gene balance flag
+    if balanced_genes:
         # Balanced gene selection: k/2 ALL-favoring (positive P) + k/2 AML-favoring (negative P)
         if k % 2 != 0:
             k += 1
@@ -384,42 +449,84 @@ def run_snr_selection(
     for i, gene in enumerate(topk_genes[:10]):
         print(f"  {i+1}. {gene[:50]}... P={P_all[gene]:.3f}")
 
-    # Output data files based on mode
-    if use_all_data:
-        # Combined mode: single output file with all data
-        all_data = X_train.loc[topk_genes].T.copy()
-        all_data.columns = topk_accessions  # Use accession numbers
-        all_data["cancer"] = y_train
-        all_data["patient"] = patient_ids
-        all_data.to_csv(out_path / f"all_top_{k}_snr.csv", index=False)
-        print(f"\nCombined CSV saved: {out_path / f'all_top_{k}_snr.csv'}")
-    else:
-        # Separate mode: train and independent files
-        train_data = X_train.loc[topk_genes].T.copy()
-        train_data.columns = topk_accessions  # Use accession numbers
-        train_data["cancer"] = y_train
-        train_data["patient"] = patient_ids
-        train_data.to_csv(out_path / f"train_top_{k}_snr.csv", index=False)
-        print(f"\nTrain CSV saved: {out_path / f'train_top_{k}_snr.csv'}")
+    # Output data files based on validation strategy
+    # Note: X_train is (genes x samples), need to transpose for splitting
+    if validation_strategy is None or validation_strategy["method"] == "split":
+        # Train/test split mode
+        if validation_strategy:
+            test_ratio = 1.0 - validation_strategy["ratio"]
+            # Transpose to (samples x genes) for splitting
+            X_train_T = X_train.loc[topk_genes].T.copy()
+            X_train_T.columns = topk_accessions
 
-        # Load and process independent set
-        if ind_csv and Path(ind_csv).exists():
-            if X_ind is None:
-                X_ind, y_ind, patient_ids_ind, _ = load_independent_set(ind_csv, labels_csv)
+            X_train_int, y_train_int, pids_train_int, X_test_int, y_test_int, pids_test_int = split_train_test(
+                X_train_T, y_train, patient_ids, test_ratio
+            )
 
-            # Filter to selected genes
-            common_genes = [g for g in topk_genes if g in X_ind.index]
-            if len(common_genes) < k:
-                print(f"Warning: Only {len(common_genes)}/{k} genes found in independent set")
+            # Internal training set
+            train_int_df = X_train_int.copy()
+            train_int_df["cancer"] = y_train_int
+            train_int_df["patient"] = pids_train_int
+            train_int_df.to_csv(out_path / f"train_internal_top_{k}_snr.csv", index=False)
+            print(f"[INFO] Internal train CSV saved: {out_path / f'train_internal_top_{k}_snr.csv'}")
 
-            common_accessions = [gene_accessions.get(g, g) for g in common_genes]
-            
-            ind_data = X_ind.loc[common_genes].T.copy()
-            ind_data.columns = common_accessions  # Use accession numbers
-            ind_data["cancer"] = y_ind
-            ind_data["patient"] = patient_ids_ind
-            ind_data.to_csv(out_path / f"independent_top_{k}_snr.csv", index=False)
-            print(f"Independent CSV saved: {out_path / f'independent_top_{k}_snr.csv'}")
+            # Internal test set
+            test_int_df = X_test_int.copy()
+            test_int_df["cancer"] = y_test_int
+            test_int_df["patient"] = pids_test_int
+            test_int_df.to_csv(out_path / f"test_internal_top_{k}_snr.csv", index=False)
+            print(f"[INFO] Internal test CSV saved: {out_path / f'test_internal_top_{k}_snr.csv'}")
+        else:
+            # No internal split - output full training set (backward compatibility)
+            train_data = X_train.loc[topk_genes].T.copy()
+            train_data.columns = topk_accessions
+            train_data["cancer"] = y_train
+            train_data["patient"] = patient_ids
+            train_data.to_csv(out_path / f"train_top_{k}_snr.csv", index=False)
+            print(f"[INFO] Train CSV saved: {out_path / f'train_top_{k}_snr.csv'}")
+
+    elif validation_strategy["method"] == "cv":
+        # Cross-validation mode
+        n_folds = validation_strategy["folds"]
+        # Transpose to (samples x genes) for splitting
+        X_train_T = X_train.loc[topk_genes].T.copy()
+        X_train_T.columns = topk_accessions
+
+        folds = split_cross_validation(X_train_T, y_train, patient_ids, n_folds)
+
+        for fold_idx, (X_tr, y_tr, pids_tr, X_te, y_te, pids_te) in enumerate(folds, start=1):
+            # Fold training set
+            fold_train_df = X_tr.copy()
+            fold_train_df["cancer"] = y_tr
+            fold_train_df["patient"] = pids_tr
+            fold_train_df.to_csv(out_path / f"fold_{fold_idx}_train_top_{k}_snr.csv", index=False)
+
+            # Fold test set
+            fold_test_df = X_te.copy()
+            fold_test_df["cancer"] = y_te
+            fold_test_df["patient"] = pids_te
+            fold_test_df.to_csv(out_path / f"fold_{fold_idx}_test_top_{k}_snr.csv", index=False)
+
+        print(f"[INFO] {n_folds}-fold CV sets saved (fold_1 through fold_{n_folds})")
+
+    # Independent test set (always generated if available)
+    if ind_csv and Path(ind_csv).exists():
+        if X_ind is None:
+            X_ind, y_ind, patient_ids_ind, _ = load_independent_set(ind_csv, labels_csv)
+
+        # Filter to selected genes
+        common_genes = [g for g in topk_genes if g in X_ind.index]
+        if len(common_genes) < k:
+            print(f"Warning: Only {len(common_genes)}/{k} genes found in independent set")
+
+        common_accessions = [gene_accessions.get(g, g) for g in common_genes]
+
+        ind_data = X_ind.loc[common_genes].T.copy()
+        ind_data.columns = common_accessions
+        ind_data["cancer"] = y_ind
+        ind_data["patient"] = patient_ids_ind
+        ind_data.to_csv(out_path / f"independent_top_{k}_snr.csv", index=False)
+        print(f"[INFO] Independent CSV saved: {out_path / f'independent_top_{k}_snr.csv'}")
 
     # Build scores dataframe
     scores_df = pd.DataFrame({

@@ -122,9 +122,10 @@ def preprocess_raw_data(raw_csv: str, labels_csv: str, start_patient_id: int = 1
     return X_df, y, metadata_df, patient_ids
 
 
-def balance_samples(X: pd.DataFrame, y: pd.Series, patient_ids: pd.Series) -> tuple[pd.DataFrame, pd.Series, pd.Series]:
+def balance_patient_samples(X: pd.DataFrame, y: pd.Series, patient_ids: pd.Series) -> tuple[pd.DataFrame, pd.Series, pd.Series]:
     """Balance samples by taking equal numbers of ALL and AML patients.
-    
+
+    NOTE: This balances PATIENTS (samples/data points), NOT genes (features).
     Takes all samples from minority class and matches with same number from majority class.
     """
     # Find indices for each class
@@ -154,27 +155,86 @@ def balance_samples(X: pd.DataFrame, y: pd.Series, patient_ids: pd.Series) -> tu
     return X_balanced, y_balanced, patient_ids_balanced
 
 
+def split_train_test(
+    X: pd.DataFrame,
+    y: pd.Series,
+    patient_ids: pd.Series,
+    test_ratio: float
+) -> tuple[pd.DataFrame, pd.Series, pd.Series, pd.DataFrame, pd.Series, pd.Series]:
+    """Split data into internal train and test sets (stratified)."""
+    from sklearn.model_selection import train_test_split
+    import numpy as np
+
+    indices = np.arange(len(X))
+    train_idx, test_idx = train_test_split(
+        indices,
+        test_size=test_ratio,
+        stratify=y,
+        random_state=42
+    )
+
+    X_train = X.iloc[train_idx].reset_index(drop=True)
+    y_train = y.iloc[train_idx].reset_index(drop=True)
+    patient_ids_train = patient_ids.iloc[train_idx].reset_index(drop=True)
+
+    X_test = X.iloc[test_idx].reset_index(drop=True)
+    y_test = y.iloc[test_idx].reset_index(drop=True)
+    patient_ids_test = patient_ids.iloc[test_idx].reset_index(drop=True)
+
+    return X_train, y_train, patient_ids_train, X_test, y_test, patient_ids_test
+
+
+def split_cross_validation(
+    X: pd.DataFrame,
+    y: pd.Series,
+    patient_ids: pd.Series,
+    n_folds: int
+) -> list[tuple[pd.DataFrame, pd.Series, pd.Series, pd.DataFrame, pd.Series, pd.Series]]:
+    """Split data into k-fold cross-validation sets (stratified)."""
+    from sklearn.model_selection import StratifiedKFold
+
+    skf = StratifiedKFold(n_splits=n_folds, shuffle=True, random_state=42)
+    folds = []
+
+    for train_idx, test_idx in skf.split(X, y):
+        X_train = X.iloc[train_idx].reset_index(drop=True)
+        y_train = y.iloc[train_idx].reset_index(drop=True)
+        patient_ids_train = patient_ids.iloc[train_idx].reset_index(drop=True)
+
+        X_test = X.iloc[test_idx].reset_index(drop=True)
+        y_test = y.iloc[test_idx].reset_index(drop=True)
+        patient_ids_test = patient_ids.iloc[test_idx].reset_index(drop=True)
+
+        folds.append((X_train, y_train, patient_ids_train, X_test, y_test, patient_ids_test))
+
+    return folds
+
+
 def run_feature_selection(
     input_train: str,
     input_ind: str | None,
     input_actual: str | None,
     k: int,
     out_dir: str,
-    balanced: bool = False,
+    balanced_genes: bool = False,  # NEW - gene balance only
+    use_balanced_patients: bool = False,  # NEW - sample balance only
+    validation_strategy: dict | None = None,  # NEW - {"method": "split", "ratio": 0.7} or {"method": "cv", "folds": 5}
     labels_csv: str | None = None,
     use_all_data: bool = False,
 ) -> None:
-    """Run ANOVA F-test feature selection on train set (or all data) and apply to test sets.
-    
+    """Run ANOVA F-test feature selection on train set and apply internal validation splits.
+
     Args:
         input_train: Path to training CSV
         input_ind: Path to independent test CSV (optional)
         input_actual: Path to actual test CSV (optional)
         k: Number of genes/features to select
         out_dir: Output directory
-        balanced: Use balanced ALL/AML selection (also balances samples)
+        balanced_genes: Select k/2 ALL-favoring + k/2 AML-favoring genes
+        use_balanced_patients: Balance patient samples (11 ALL + 11 AML)
+        validation_strategy: Internal validation config (train/test split or CV)
         labels_csv: Path to labels CSV (required for raw data)
-        use_all_data: If True, combine train+independent for selection and output single file
+        use_all_data: If True, combine train+independent for selection
     """
     out_path = Path(out_dir)
     out_path.mkdir(parents=True, exist_ok=True)
@@ -219,11 +279,12 @@ def run_feature_selection(
             patient_ids = pd.concat([patient_ids, patient_ids_ind], ignore_index=True)
             print(f"[INFO] Combined data shape: {X_train.shape}")
     
-    # Balance samples if balanced mode (equal ALL and AML patients)
-    if balanced:
-        X_train, y_train, patient_ids = balance_samples(X_train, y_train, patient_ids)
+    # Balance patient samples if requested (equal ALL and AML patients)
+    if use_balanced_patients:
+        X_train, y_train, patient_ids = balance_patient_samples(X_train, y_train, patient_ids)
 
-    if balanced:
+    # Select features based on gene balance flag
+    if balanced_genes:
         feature_names = select_features_anova_f_balanced(X_train, y_train, k)
     else:
         feature_names = select_features_anova_f(X_train, y_train, k)
@@ -263,7 +324,7 @@ def run_feature_selection(
     }).sort_values('f_score', ascending=False)
 
     # Add rankings based on mode
-    if balanced:
+    if balanced_genes:
         # For balanced: rank within each class
         all_genes = f_scores_df[f_scores_df['favors_class'] == 'ALL'].copy()
         aml_genes = f_scores_df[f_scores_df['favors_class'] == 'AML'].copy()
@@ -298,52 +359,72 @@ def run_feature_selection(
             f.write(f"{acc}\n")
     print(f"[INFO] Selected genes saved to {out_path / f'selected_genes_anova_f_{k}genes.csv'}")
     
-    # Output data files based on mode
-    # feature_names are already accession numbers (used as column headers)
-    if use_all_data:
-        # Combined mode: single output file with all data
-        all_topk = X_train[feature_names].copy()
-        all_topk["cancer"] = y_train.values
-        all_topk["patient"] = patient_ids.values
-        all_topk.to_csv(out_path / f"all_top_{k}_anova_f.csv", index=False)
-        print(f"[INFO] Combined CSV saved to {out_path / f'all_top_{k}_anova_f.csv'}")
-    else:
-        # Separate mode: train and independent files
-        train_topk = X_train[feature_names].copy()
-        train_topk["cancer"] = y_train.values
-        train_topk["patient"] = patient_ids.values
-        train_topk.to_csv(out_path / f"train_top_{k}_anova_f.csv", index=False)
-        print(f"[INFO] Train CSV saved to {out_path / f'train_top_{k}_anova_f.csv'}")
+    # FILE 3+: Data files based on validation strategy
+    if validation_strategy is None or validation_strategy["method"] == "split":
+        # Train/test split mode
+        if validation_strategy:
+            test_ratio = 1.0 - validation_strategy["ratio"]
+            X_train_int, y_train_int, pids_train_int, X_test_int, y_test_int, pids_test_int = split_train_test(
+                X_train[feature_names], y_train, patient_ids, test_ratio
+            )
 
-        if input_ind is not None:
-            if needs_preprocessing:
-                X_ind, y_ind, _, patient_ids_ind = preprocess_raw_data(input_ind, labels_csv, start_patient_id=39)
-            else:
-                df_ind = pd.read_csv(input_ind)
-                y_ind = df_ind["cancer"] if "cancer" in df_ind.columns else df_ind["label"]
-                patient_ids_ind = df_ind["patient"] if "patient" in df_ind.columns else pd.Series(range(39, 39+len(df_ind)))
-                cols_to_drop = [c for c in ["cancer", "patient", "label"] if c in df_ind.columns]
-                X_ind = df_ind.drop(columns=cols_to_drop)
-            ind_topk = X_ind[feature_names].copy()
-            ind_topk["cancer"] = y_ind.values
-            ind_topk["patient"] = patient_ids_ind.values
-            ind_topk.to_csv(out_path / f"independent_top_{k}_anova_f.csv", index=False)
-            print(f"[INFO] Independent CSV saved to {out_path / f'independent_top_{k}_anova_f.csv'}")
+            # Internal training set
+            train_int_df = X_train_int.copy()
+            train_int_df["cancer"] = y_train_int.values
+            train_int_df["patient"] = pids_train_int.values
+            train_int_df.to_csv(out_path / f"train_internal_top_{k}_anova_f.csv", index=False)
+            print(f"[INFO] Internal train CSV saved: {out_path / f'train_internal_top_{k}_anova_f.csv'}")
 
-        if input_actual is not None:
-            if needs_preprocessing:
-                X_act, y_act, _, patient_ids_act = preprocess_raw_data(input_actual, labels_csv)
-            else:
-                df_act = pd.read_csv(input_actual)
-                y_act = df_act["cancer"] if "cancer" in df_act.columns else df_act["label"]
-                patient_ids_act = df_act["patient"] if "patient" in df_act.columns else pd.Series(range(1, len(df_act)+1))
-                cols_to_drop = [c for c in ["cancer", "patient", "label"] if c in df_act.columns]
-                X_act = df_act.drop(columns=cols_to_drop)
-            act_topk = X_act[feature_names].copy()
-            act_topk["cancer"] = y_act.values
-            act_topk["patient"] = patient_ids_act.values
-            act_topk.to_csv(out_path / f"actual_top_{k}_anova_f.csv", index=False)
-            print(f"[INFO] Actual CSV saved to {out_path / f'actual_top_{k}_anova_f.csv'}")
+            # Internal test set
+            test_int_df = X_test_int.copy()
+            test_int_df["cancer"] = y_test_int.values
+            test_int_df["patient"] = pids_test_int.values
+            test_int_df.to_csv(out_path / f"test_internal_top_{k}_anova_f.csv", index=False)
+            print(f"[INFO] Internal test CSV saved: {out_path / f'test_internal_top_{k}_anova_f.csv'}")
+        else:
+            # No internal split - output full training set (backward compatibility)
+            train_topk = X_train[feature_names].copy()
+            train_topk["cancer"] = y_train.values
+            train_topk["patient"] = patient_ids.values
+            train_topk.to_csv(out_path / f"train_top_{k}_anova_f.csv", index=False)
+            print(f"[INFO] Train CSV saved: {out_path / f'train_top_{k}_anova_f.csv'}")
+
+    elif validation_strategy["method"] == "cv":
+        # Cross-validation mode
+        n_folds = validation_strategy["folds"]
+        folds = split_cross_validation(X_train[feature_names], y_train, patient_ids, n_folds)
+
+        for fold_idx, (X_tr, y_tr, pids_tr, X_te, y_te, pids_te) in enumerate(folds, start=1):
+            # Fold training set
+            fold_train_df = X_tr.copy()
+            fold_train_df["cancer"] = y_tr.values
+            fold_train_df["patient"] = pids_tr.values
+            fold_train_df.to_csv(out_path / f"fold_{fold_idx}_train_top_{k}_anova_f.csv", index=False)
+
+            # Fold test set
+            fold_test_df = X_te.copy()
+            fold_test_df["cancer"] = y_te.values
+            fold_test_df["patient"] = pids_te.values
+            fold_test_df.to_csv(out_path / f"fold_{fold_idx}_test_top_{k}_anova_f.csv", index=False)
+
+        print(f"[INFO] {n_folds}-fold CV sets saved (fold_1 through fold_{n_folds})")
+
+    # Independent test set (always generated if available)
+    if input_ind is not None:
+        if needs_preprocessing:
+            X_ind, y_ind, _, patient_ids_ind = preprocess_raw_data(input_ind, labels_csv, start_patient_id=39)
+        else:
+            df_ind = pd.read_csv(input_ind)
+            y_ind = df_ind["cancer"] if "cancer" in df_ind.columns else df_ind["label"]
+            patient_ids_ind = df_ind["patient"] if "patient" in df_ind.columns else pd.Series(range(39, 39+len(df_ind)))
+            cols_to_drop = [c for c in ["cancer", "patient", "label"] if c in df_ind.columns]
+            X_ind = df_ind.drop(columns=cols_to_drop)
+
+        ind_topk = X_ind[feature_names].copy()
+        ind_topk["cancer"] = y_ind.values
+        ind_topk["patient"] = patient_ids_ind.values
+        ind_topk.to_csv(out_path / f"independent_top_{k}_anova_f.csv", index=False)
+        print(f"[INFO] Independent CSV saved: {out_path / f'independent_top_{k}_anova_f.csv'}")
 
 
 def main():
