@@ -288,26 +288,112 @@ def train_amplitude_vqc(X, y, num_features=16, reps=2, test_size=0.3,
     return clf, results
 
 
-# Example usage
+# Example usage with real preprocessed data
 if __name__ == "__main__":
-    # Example with dummy data
-    np.random.seed(42)
-    
-    # Simulate 16-gene expression data
-    n_samples = 50
-    n_features = 16
-    X = np.random.randn(n_samples, n_features)
-    y = np.random.randint(0, 2, n_samples)
-    
+    import sys
+    from pathlib import Path
+    from data_loader import discover_preprocessed_files, load_preprocessed_data
+
+    print("\n" + "="*60)
+    print("AMPLITUDE ENCODING - LOADING PREPROCESSED DATA")
+    print("="*60)
+
+    # Discover available files
+    files = discover_preprocessed_files()
+
+    if not (files['train_internal'] or files['folds']):
+        print("\n[ERROR] No preprocessed data found!")
+        print("Please run preprocessing.py first to generate feature-selected data.")
+        print("\nExpected files in results/:")
+        print("  - train_internal_top_*_anova_f.csv or train_internal_top_*_snr.csv")
+        print("  - test_internal_top_*_anova_f.csv or test_internal_top_*_snr.csv")
+        print("  - independent_top_*_anova_f.csv or independent_top_*_snr.csv")
+        print("  OR")
+        print("  - fold_1_train_top_*.csv, fold_1_test_top_*.csv, ...")
+        sys.exit(1)
+
+    # Print available files
+    print("\n[INFO] Found preprocessed data:")
+    if files['train_internal']:
+        print(f"  ✓ Internal train: {files['train_internal'].name}")
+    if files['test_internal']:
+        print(f"  ✓ Internal test: {files['test_internal'].name}")
+    if files['independent']:
+        print(f"  ✓ Independent: {files['independent'].name}")
+    if files['folds']:
+        print(f"  ✓ Cross-validation: {len(files['folds'])} folds")
+
+    # Load data based on available validation strategy
+    if files['train_internal']:
+        print("\n[INFO] Loading internal train/test split...")
+        X_train, y_train = load_preprocessed_data(files['train_internal'])
+        X_test, y_test = load_preprocessed_data(files['test_internal'])
+
+        print(f"  Train: {X_train.shape[0]} samples × {X_train.shape[1]} features")
+        print(f"  Test: {X_test.shape[0]} samples × {X_test.shape[1]} features")
+        print(f"  Class distribution (train): ALL={sum(y_train==0)}, AML={sum(y_train==1)}")
+
+        # Combine for training (or use separately)
+        X = np.vstack([X_train, X_test])
+        y = np.concatenate([y_train, y_test])
+
+    elif files['folds']:
+        print("\n[INFO] Found CV folds - using fold 1 for demonstration...")
+        X_train, y_train = load_preprocessed_data(files['folds'][0][0])
+        X_test, y_test = load_preprocessed_data(files['folds'][0][1])
+
+        print(f"  Fold 1 train: {X_train.shape[0]} samples × {X_train.shape[1]} features")
+        print(f"  Fold 1 test: {X_test.shape[0]} samples × {X_test.shape[1]} features")
+
+        X = np.vstack([X_train, X_test])
+        y = np.concatenate([y_train, y_test])
+
+    else:
+        print("\n[ERROR] No internal validation data found!")
+        sys.exit(1)
+
+    num_features = X.shape[1]
+    n_qubits = get_num_qubits(num_features)
+
+    print(f"\n[INFO] Training amplitude-encoded VQC:")
+    print(f"  Features: {num_features}")
+    print(f"  Qubits: {n_qubits} (logarithmic scaling)")
+    print(f"  Total samples: {X.shape[0]}")
+    print(f"  Class distribution: ALL={sum(y==0)}, AML={sum(y==1)}")
+    print(f"\nThis may take a few minutes...\n")
+
     # Train amplitude-encoded VQC
     clf, results = train_amplitude_vqc(
         X, y,
-        num_features=16,
+        num_features=num_features,
         reps=2,
         max_iter=50
     )
-    
-    print("\n✓ Successfully implemented Amplitude Encoding (Shallow Variant)")
-    print(f"✓ Qubit scaling: Logarithmic (16 features → {results['n_qubits']} qubits)")
-    print(f"✓ Parameters: {results['n_params']} (75% reduction vs angle encoding)")
+
+    # Evaluate on independent set if available
+    if files['independent']:
+        print("\n" + "="*60)
+        print("INDEPENDENT SET EVALUATION")
+        print("="*60)
+        X_ind, y_ind = load_preprocessed_data(files['independent'])
+        print(f"Independent samples: {X_ind.shape[0]}")
+        print(f"Class distribution: ALL={sum(y_ind==0)}, AML={sum(y_ind==1)}")
+
+        # Preprocess independent set
+        X_ind_norm, _ = preprocess_and_normalize(X_ind)
+        y_ind_pred = clf.predict(X_ind_norm)
+
+        ind_acc = accuracy_score(y_ind, y_ind_pred)
+        print(f"\nIndependent Set Accuracy: {ind_acc:.4f}")
+        print("\nClassification Report (Independent Set):")
+        print(classification_report(y_ind, y_ind_pred,
+                                    target_names=['ALL', 'AML'],
+                                    digits=4))
+
+    print("\n" + "="*60)
+    print("✓ SUCCESSFULLY LOADED AND TRAINED ON PREPROCESSED DATA!")
+    print("="*60)
+    print(f"\n✓ Qubit scaling: Logarithmic ({num_features} features → {results['n_qubits']} qubits)")
+    print(f"✓ Parameters: {results['n_params']}")
     print(f"✓ Training: Hybrid quantum-classical with parameter-shift gradients")
+    print()

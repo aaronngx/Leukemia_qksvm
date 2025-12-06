@@ -122,21 +122,24 @@ def list_available_data():
 # ============================================================
 def load_selected_data(data_file: Path):
     """Load the selected gene expression data."""
+    from data_loader import load_preprocessed_data
+
+    # Load features and labels using unified loader
+    X, y = load_preprocessed_data(data_file)
+
+    # Also load patient IDs and feature column names for reference
     df = pd.read_csv(data_file)
-    
-    # Separate features and labels
-    y = df["cancer"].map({"ALL": 0, "AML": 1}).values
-    patient_ids = df["patient"].values
-    
-    # Get feature columns (everything except cancer and patient)
-    feature_cols = [c for c in df.columns if c not in ["cancer", "patient"]]
-    X = df[feature_cols].values
-    
+    patient_ids = df["patient"].values if "patient" in df.columns else None
+
+    # Get feature columns (everything except cancer/label and patient)
+    exclude_cols = {"cancer", "label", "patient", "Patient", "patient_id"}
+    feature_cols = [c for c in df.columns if c not in exclude_cols]
+
     print(f"\n  Loaded data from: {data_file.name}")
     print(f"  Samples: {len(X)}")
     print(f"  Features (genes): {len(feature_cols)}")
     print(f"  Classes: ALL={sum(y==0)}, AML={sum(y==1)}")
-    
+
     return X, y, feature_cols, patient_ids
 
 

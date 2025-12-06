@@ -26,20 +26,21 @@ def scale_to_angle(X: np.ndarray):
 
 def load_processed(train_csv: str, test_csv: str | None = None):
     """
-    Load processed CSVs in (features + 'label') format.
+    Load processed CSVs with auto-detection of label column.
+
+    Supports both 'label' and 'cancer' column names.
+    Converts labels: ALL → 0, AML → 1
 
     Returns
     -------
     (X_train, y_train), (X_test, y_test)
     """
-    df_train = pd.read_csv(train_csv)
-    y_train = df_train["label"].values
-    X_train = df_train.drop(columns=["label"]).values
+    from data_loader import load_preprocessed_data
+
+    X_train, y_train = load_preprocessed_data(train_csv)
 
     if test_csv is not None:
-        df_test = pd.read_csv(test_csv)
-        y_test = df_test["label"].values
-        X_test = df_test.drop(columns=["label"]).values
+        X_test, y_test = load_preprocessed_data(test_csv)
     else:
         X_test, y_test = None, None
 
