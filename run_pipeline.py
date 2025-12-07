@@ -25,7 +25,7 @@ from amplitude_encoding import (
     build_amplitude_vqc,
     train_amplitude_vqc
 )
-from angle_encoding import angle_encoding_circuit
+from angle_encoding import angle_encoding_circuit, AngleEncodingType
 from qksvm_golub import (
     train_eval_qksvm,
     EncodingType,
@@ -161,6 +161,54 @@ def select_encoding_method():
         print("  [ERROR] Please enter 1, 2, or 3")
 
 
+def select_angle_encoding_type():
+    """Ask which angle encoding circuit type to use."""
+    print("\n[STEP 3b] SELECT ANGLE ENCODING TYPE")
+    print("-" * 50)
+    print("  1. Simple RY (no entanglement)")
+    print("     - Single-axis: RY gates only")
+    print("     - No entanglement between qubits")
+    print()
+    print("  2. ZZ Feature Map (ZZ interactions)")
+    print("     - Single-axis: RZ gates")
+    print("     - Entanglement: ZZ interactions (CNOT-RZ-CNOT)")
+    print("     - Data re-uploading via repetitions")
+    print()
+    print("  3. BPS Circuit (two-axis encoding)")
+    print("     - Two-axis: RZ + RY gates")
+    print("     - Entanglement: Linear CNOT chain")
+    print("     - Data re-uploading: Explicit RZ at end")
+    
+    while True:
+        choice = input("  -> ").strip()
+        if choice == "1":
+            return AngleEncodingType.SIMPLE_RY, 1
+        elif choice == "2":
+            reps = ask_reps("ZZ Feature Map", default=2)
+            return AngleEncodingType.ZZ_FEATURE_MAP, reps
+        elif choice == "3":
+            reps = ask_reps("BPS Circuit", default=1)
+            return AngleEncodingType.BPS_CIRCUIT, reps
+        print("  [ERROR] Please enter 1, 2, or 3")
+
+
+def ask_reps(circuit_name: str, default: int) -> int:
+    """Ask for number of repetitions."""
+    print(f"\n  How many repetitions for {circuit_name}?")
+    print(f"  (more reps = more expressivity but deeper circuit)")
+    while True:
+        choice = input(f"  -> (default {default}): ").strip()
+        if choice == "":
+            return default
+        try:
+            reps = int(choice)
+            if reps >= 1:
+                return reps
+            print("  [ERROR] Reps must be >= 1")
+        except ValueError:
+            print("  [ERROR] Please enter a number")
+
+
 def select_classifier():
     """Ask which classifier to use."""
     print("\n[STEP 4] SELECT CLASSIFIER")
@@ -248,7 +296,11 @@ def compare_encodings(num_features):
     print()
 
 
-def run_qksvm(X, y, num_features, encoding_type_str):
+def run_qksvm(
+    X, y, num_features, encoding_type_str,
+    angle_encoding_type: AngleEncodingType = AngleEncodingType.SIMPLE_RY,
+    angle_reps: int = 2,
+):
     """Run QKSVM with selected encoding."""
     print("\n" + "=" * 60)
     print("QUANTUM KERNEL SVM (QKSVM)")
@@ -263,6 +315,10 @@ def run_qksvm(X, y, num_features, encoding_type_str):
         n_qubits = num_features
     
     print(f"\nEncoding: {encoding_type_str}")
+    if encoding_type_str == "angle":
+        print(f"Angle encoding type: {angle_encoding_type.value}")
+        if angle_encoding_type != AngleEncodingType.SIMPLE_RY:
+            print(f"Repetitions: {angle_reps}")
     print(f"Qubits: {n_qubits}")
     print(f"Samples: {len(X)}")
     print(f"Features: {num_features}")
@@ -286,10 +342,17 @@ def run_qksvm(X, y, num_features, encoding_type_str):
             seed=42,
             output_dir="results_qksvm",
             encoding_type=encoding,
+            angle_encoding_type=angle_encoding_type,
+            angle_reps=angle_reps,
             kernel_method=KernelMethod.STATEVECTOR,
             backend_type=BackendType.STATEVECTOR,
         )
-        return {"success": True, "encoding": encoding_type_str, "n_qubits": n_qubits}
+        return {
+            "success": True, 
+            "encoding": encoding_type_str, 
+            "n_qubits": n_qubits,
+            "angle_type": angle_encoding_type.value if encoding_type_str == "angle" else None,
+        }
     except Exception as e:
         print(f"\n[ERROR] QKSVM failed: {e}")
         return {"success": False, "error": str(e)}
@@ -337,6 +400,12 @@ def run_pipeline():
     # Step 3: Encoding
     encoding_choice = select_encoding_method()
     
+    # Ask for angle encoding type if using angle encoding
+    angle_encoding_type = AngleEncodingType.SIMPLE_RY
+    angle_reps = 2
+    if encoding_choice in [2, 3]:  # Angle or Both
+        angle_encoding_type, angle_reps = select_angle_encoding_type()
+    
     # Step 4: Classifier
     classifier_choice = select_classifier()
     
@@ -354,7 +423,11 @@ def run_pipeline():
     if classifier_choice == 1:  # QKSVM
         for enc_type in encoding_types:
             print(f"\n--- Running QKSVM with {enc_type} encoding ---")
-            results[f"qksvm_{enc_type}"] = run_qksvm(X, y, num_features, enc_type)
+            results[f"qksvm_{enc_type}"] = run_qksvm(
+                X, y, num_features, enc_type,
+                angle_encoding_type=angle_encoding_type,
+                angle_reps=angle_reps,
+            )
     
     elif classifier_choice == 2:  # VQC
         for enc_type in encoding_types:

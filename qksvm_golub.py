@@ -12,7 +12,7 @@ import joblib
 
 from qiskit import QuantumCircuit
 
-from angle_encoding import angle_encoding_circuit
+from angle_encoding import angle_encoding_circuit, AngleEncodingType
 from amplitude_encoding import amplitude_encoding_feature_map as amp_encoding_circuit
 from backend_config import (
     BackendType,
@@ -161,6 +161,8 @@ def train_eval_qksvm(
     seed: int = 42,
     output_dir: str = "results_qksvm",
     encoding_type: str = EncodingType.ANGLE,
+    angle_encoding_type: AngleEncodingType = AngleEncodingType.SIMPLE_RY,
+    angle_reps: int = 2,
     kernel_method: KernelMethod = KernelMethod.STATEVECTOR,
     backend_type: BackendType = BackendType.STATEVECTOR,
     max_bond_dimension: int = 100,
@@ -182,6 +184,10 @@ def train_eval_qksvm(
         Directory to save results.
     encoding_type : str
         "angle" or "amplitude" encoding.
+    angle_encoding_type : AngleEncodingType
+        For angle encoding: SIMPLE_RY, ZZ_FEATURE_MAP, or BPS_CIRCUIT.
+    angle_reps : int
+        Number of repetitions for ZZ/BPS circuits.
     kernel_method : KernelMethod
         STATEVECTOR, SWAP_TEST, or HADAMARD_TEST.
     backend_type : BackendType
@@ -225,8 +231,15 @@ def train_eval_qksvm(
     # Build feature map based on encoding type
     if encoding_type == EncodingType.AMPLITUDE:
         feature_map, x_params, _ = amp_encoding_circuit(n_features)
-    else:  # Default to angle encoding
-        feature_map, x_params = angle_encoding_circuit(n_features)
+    else:  # Angle encoding with selectable circuit type
+        feature_map, x_params = angle_encoding_circuit(
+            n_features,
+            encoding_type=angle_encoding_type,
+            reps=angle_reps,
+        )
+        print(f"Angle encoding type: {angle_encoding_type.value}")
+        if angle_encoding_type != AngleEncodingType.SIMPLE_RY:
+            print(f"Repetitions: {angle_reps}")
 
     # Save circuit visualization
     print("[INFO] Saving circuit diagram...")
@@ -376,6 +389,8 @@ def run_qksvm_from_csv(
     ind_csv: str | None = "data/processed/independent_topk_snr.csv",
     output_dir: str = "results_qksvm",
     encoding_type: str = EncodingType.ANGLE,
+    angle_encoding_type: AngleEncodingType = AngleEncodingType.SIMPLE_RY,
+    angle_reps: int = 2,
     kernel_method: KernelMethod = KernelMethod.STATEVECTOR,
     backend_type: BackendType = BackendType.STATEVECTOR,
     max_bond_dimension: int = 100,
@@ -386,12 +401,25 @@ def run_qksvm_from_csv(
     Convenience wrapper: load CSVs and run QKSVM end-to-end.
 
     Usage (in a notebook):
-        from qksvm_golub import run_qksvm_from_csv, BackendType, KernelMethod, EncodingType
+        from qksvm_golub import run_qksvm_from_csv, BackendType, KernelMethod, EncodingType, AngleEncodingType
+        
+        # Simple RY (default)
+        run_qksvm_from_csv(train_csv="results/train_top_16_anova_f.csv")
+        
+        # ZZ Feature Map with 2 reps
         run_qksvm_from_csv(
             train_csv="results/train_top_16_anova_f.csv",
-            ind_csv="results/independent_top_16_anova_f.csv",
-            encoding_type=EncodingType.AMPLITUDE,
-            kernel_method=KernelMethod.SWAP_TEST,
+            encoding_type=EncodingType.ANGLE,
+            angle_encoding_type=AngleEncodingType.ZZ_FEATURE_MAP,
+            angle_reps=2,
+        )
+        
+        # BPS Circuit
+        run_qksvm_from_csv(
+            train_csv="results/train_top_16_anova_f.csv",
+            encoding_type=EncodingType.ANGLE,
+            angle_encoding_type=AngleEncodingType.BPS_CIRCUIT,
+            angle_reps=1,
         )
     """
     (X_train, y_train), (X_ind, y_ind) = load_processed(train_csv, ind_csv)
@@ -405,6 +433,8 @@ def run_qksvm_from_csv(
         seed=seed,
         output_dir=output_dir,
         encoding_type=encoding_type,
+        angle_encoding_type=angle_encoding_type,
+        angle_reps=angle_reps,
         kernel_method=kernel_method,
         backend_type=backend_type,
         max_bond_dimension=max_bond_dimension,
