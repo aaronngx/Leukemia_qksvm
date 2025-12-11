@@ -16,6 +16,7 @@ sys.path.insert(0, str(Path(__file__).parent / "feature-selection-methods"))
 
 from anova_f import run_feature_selection as run_anova
 from signal_to_noise import run_snr_selection
+from scad_svm import run_scad_selection
 
 
 def print_banner():
@@ -77,15 +78,16 @@ def ask_method():
     print("\n[2/4] Feature selection method:")
     print("      1. ANOVA F-test")
     print("      2. SNR (Signal-to-Noise Ratio / Golub's P-score)")
-    print("      3. Both methods")
+    print("      3. SCAD-SVM (Smoothly Clipped Absolute Deviation)")
+    print("      4. All methods (ANOVA + SNR + SCAD)")
 
     while True:
         try:
             choice = input("      -> ")
-            if choice in ["1", "2", "3"]:
+            if choice in ["1", "2", "3", "4"]:
                 return int(choice)
             else:
-                print("      [ERROR] Please enter 1, 2, or 3")
+                print("      [ERROR] Please enter 1, 2, 3, or 4")
         except KeyboardInterrupt:
             print("\n\n[INFO] Cancelled by user")
             sys.exit(0)
@@ -151,7 +153,7 @@ def print_config(k: int, balanced_genes: bool, method: int, use_balanced_patient
     else:
         print(f"  • Gene Balance: No (pure top-k by score)")
 
-    method_names = {1: "ANOVA F-test", 2: "SNR (Golub P-score)", 3: "ANOVA + SNR"}
+    method_names = {1: "ANOVA F-test", 2: "SNR (Golub P-score)", 3: "SCAD-SVM", 4: "All (ANOVA + SNR + SCAD)"}
     print(f"  • Method: {method_names[method]}")
 
     if use_balanced_patients:
@@ -203,7 +205,7 @@ def run_preprocessing():
 
     # Run selected methods
     try:
-        if method in [1, 3]:  # ANOVA or Both
+        if method in [1, 4]:  # ANOVA or All
             print("Running ANOVA F-test...")
             print("  - Calculating F-scores from training set only")
             print("  - Selecting top genes based on training data")
@@ -222,7 +224,7 @@ def run_preprocessing():
             )
             print("✓ ANOVA complete\n")
 
-        if method in [2, 3]:  # SNR or Both
+        if method in [2, 4]:  # SNR or All
             print("Running SNR (Signal-to-Noise / Golub P-score)...")
             print("  - Calculating P(g,c) from training set only")
             print("  - Selecting top genes based on training data")
@@ -239,6 +241,20 @@ def run_preprocessing():
                 validation_strategy=validation_strategy,  # NEW param
             )
             print("✓ SNR complete\n")
+
+        if method in [3, 4]:  # SCAD-SVM or All
+            print("Running SCAD-SVM (Smoothly Clipped Absolute Deviation)...")
+            print("  - Using SCAD regularization for automatic feature selection")
+            print("  - Lambda controls sparsity (auto-tuned via CV)")
+            print()
+            run_scad_selection(
+                k=k,
+                use_all_data=False,  # ALWAYS False - training only!
+                auto_tune_lambda=True,
+                output_dir=out_dir,
+                verbose=True,
+            )
+            print("✓ SCAD-SVM complete\n")
 
         # Success summary
         print_separator()
@@ -273,7 +289,7 @@ def run_preprocessing():
         print()
         print("Output files in 'results/':")
 
-        if method in [1, 3]:
+        if method in [1, 4]:
             print(f"\n  ANOVA F-test:")
             print(f"    • topk_anova_f_{k}genes.csv")
             print(f"        - Full rankings, F-scores, class favorability")
@@ -289,7 +305,7 @@ def run_preprocessing():
                 print(f"    • independent_top_{k}_anova_f.csv")
                 print(f"        - Independent: 34 samples × {k} genes")
 
-        if method in [2, 3]:
+        if method in [2, 4]:
             print(f"\n  SNR (Signal-to-Noise):")
             print(f"    • topk_snr_{k}genes.csv")
             print(f"        - Full rankings, P-scores, class favorability")
@@ -303,6 +319,16 @@ def run_preprocessing():
                 print(f"    • fold_1_train/test through fold_{folds}_train/test (top_{k}_snr.csv)")
             if ind_csv.exists():
                 print(f"    • independent_top_{k}_snr.csv")
+                print(f"        - Independent: 34 samples × {k} genes")
+
+        if method in [3, 4]:
+            print(f"\n  SCAD-SVM:")
+            print(f"    • selected_genes_scad_{k}genes.csv")
+            print(f"        - Gene rankings with SCAD weights")
+            print(f"    • train_top_{k}_scad.csv")
+            print(f"        - Training data with SCAD-selected genes")
+            if ind_csv.exists():
+                print(f"    • independent_top_{k}_scad.csv")
                 print(f"        - Independent: 34 samples × {k} genes")
 
         print()
