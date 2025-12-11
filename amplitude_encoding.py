@@ -1,44 +1,50 @@
 #!/usr/bin/env python3
 """
-TRUE Amplitude Encoding for Quantum Machine Learning.
+Amplitude-Encoded Variational Quantum Circuit (VQC) for Leukemia Classification.
 
-Amplitude encoding maps classical features to the PROBABILITY AMPLITUDES
-of a quantum state:
+This implements a Quantum Neural Network with the following architecture:
 
-    |ψ⟩ = Σᵢ xᵢ |i⟩
+1. FEATURE MAP U(x): Amplitude Encoding
+   - Encodes 16 gene features into quantum state amplitudes
+   - Uses Mottonen Decomposition (via Qiskit's initialize())
+   - 4 qubits for 16 features: n = log₂(16) = 4
+   - Deep circuit: O(2^n) gates
 
-where xᵢ are the normalized feature values.
+2. ANSATZ V(θ): Variational Layers
+   - RX-RZ-RX rotation blocks (SU(2) parameterization)
+   - Nearest-neighbor CNOT entanglement
+   - 2-3 layers typical
+   - 24 trainable parameters for 4 qubits, 2 layers
 
-Key Properties:
-- Logarithmic qubit scaling: n = ⌈log₂(d)⌉ qubits for d features
-- Features encoded in AMPLITUDES, not rotation angles
-- Uses state preparation (Mottonen Decomposition internally via initialize())
-- Deep circuit: O(2^n) gates for exact state preparation
+3. MEASUREMENT & PREDICTION
+   - Observable: ⟨Z₀⟩ (Pauli-Z on qubit 0)
+   - Prediction: p₁ = (1 + ⟨Z₀⟩) / 2 → probability of AML (class 1)
 
-This is DIFFERENT from angle encoding which uses rotation gates!
-
-Implementation uses Qiskit's initialize() which internally uses
-Mottonen-like decomposition for arbitrary state preparation.
+Full Pipeline:
+    |0⟩⊗ⁿ → U(x) → V(θ) → Measure ⟨Z₀⟩ → p₁ = P(AML)
 """
 
 import numpy as np
 from qiskit import QuantumCircuit
-from qiskit.circuit import ParameterVector
+from qiskit.circuit import ParameterVector, Parameter
 from qiskit.circuit.library import TwoLocal
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from qiskit.quantum_info import SparsePauliOp, Statevector
+from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import accuracy_score, classification_report
 from sklearn.model_selection import train_test_split
 
+
+# =============================================================================
+# UTILITY FUNCTIONS
+# =============================================================================
 
 def get_num_qubits(num_features: int) -> int:
     """
     Calculate qubits needed for amplitude encoding.
     
-    Logarithmic scaling: n = ⌈log₂(d)⌉
+    n = ⌈log₂(d)⌉ qubits for d features
     
     Examples:
-    - 4 features → 2 qubits (2² = 4 amplitudes)
-    - 8 features → 3 qubits (2³ = 8 amplitudes)
     - 16 features → 4 qubits (2⁴ = 16 amplitudes)
     - 50 features → 6 qubits (2⁶ = 64 amplitudes, pad with zeros)
     """
@@ -47,23 +53,12 @@ def get_num_qubits(num_features: int) -> int:
 
 def normalize_features(x: np.ndarray) -> np.ndarray:
     """
-    Normalize feature vector for amplitude encoding.
+    L2-normalize feature vector for amplitude encoding.
     
-    The state |ψ⟩ = Σᵢ αᵢ|i⟩ requires Σᵢ|αᵢ|² = 1
-    
-    Parameters
-    ----------
-    x : np.ndarray
-        Feature vector of shape (d,)
-    
-    Returns
-    -------
-    x_normalized : np.ndarray
-        L2-normalized vector suitable for amplitude encoding
+    Required: Σᵢ|xᵢ|² = 1 for valid quantum state.
     """
     norm = np.linalg.norm(x)
     if norm < 1e-10:
-        # Handle zero vector
         return np.ones(len(x)) / np.sqrt(len(x))
     return x / norm
 
@@ -72,17 +67,7 @@ def pad_to_power_of_2(x: np.ndarray) -> np.ndarray:
     """
     Pad feature vector to nearest power of 2.
     
-    Required because n qubits can only encode 2^n amplitudes.
-    
-    Parameters
-    ----------
-    x : np.ndarray
-        Feature vector of shape (d,)
-    
-    Returns
-    -------
-    x_padded : np.ndarray
-        Padded vector of shape (2^n,) where n = ⌈log₂(d)⌉
+    n qubits can only encode 2^n amplitudes.
     """
     d = len(x)
     n_qubits = get_num_qubits(d)
@@ -91,7 +76,6 @@ def pad_to_power_of_2(x: np.ndarray) -> np.ndarray:
     if d == target_size:
         return x
     
-    # Pad with zeros
     padded = np.zeros(target_size)
     padded[:d] = x
     return padded
@@ -104,40 +88,31 @@ def preprocess_for_amplitude_encoding(X: np.ndarray):
     Steps:
     1. Standardize features (zero mean, unit variance)
     2. Pad each sample to power of 2 length
-    3. L2-normalize each sample (required for valid quantum state)
+    3. L2-normalize each sample
     
-    Parameters
-    ----------
-    X : np.ndarray of shape (n_samples, n_features)
-        Raw feature matrix
-    
-    Returns
-    -------
-    X_prepared : np.ndarray of shape (n_samples, 2^n_qubits)
-        Prepared features ready for amplitude encoding
-    scaler : StandardScaler
-        Fitted scaler for transforming new data
-    n_qubits : int
-        Number of qubits needed
+    Returns:
+        X_prepared: Ready for amplitude encoding
+        scaler: Fitted StandardScaler
+        n_qubits: Number of qubits needed
     """
     n_samples, n_features = X.shape
     n_qubits = get_num_qubits(n_features)
     state_dim = 2 ** n_qubits
     
-    # Standardize
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
     
-    # Prepare each sample
     X_prepared = np.zeros((n_samples, state_dim))
     for i in range(n_samples):
-        # Pad to power of 2
         padded = pad_to_power_of_2(X_scaled[i])
-        # Normalize to unit vector (required for quantum state)
         X_prepared[i] = normalize_features(padded)
     
     return X_prepared, scaler, n_qubits
 
+
+# =============================================================================
+# 1. FEATURE MAP U(x): AMPLITUDE ENCODING
+# =============================================================================
 
 def encode_amplitude(x: np.ndarray) -> QuantumCircuit:
     """
@@ -147,324 +122,480 @@ def encode_amplitude(x: np.ndarray) -> QuantumCircuit:
     Mottonen Decomposition for arbitrary state preparation.
     
     The resulting state is:
-        |ψ⟩ = Σᵢ xᵢ |i⟩
+        |ψ(x)⟩ = Σᵢ xᵢ |i⟩
     
     where xᵢ are the normalized feature values.
     
     Parameters
     ----------
     x : np.ndarray
-        Normalized feature vector (must have L2 norm = 1)
-        Length must be power of 2
+        Normalized feature vector (L2 norm = 1, length = 2^n)
     
     Returns
     -------
     qc : QuantumCircuit
-        Circuit that prepares |ψ⟩ = Σᵢ xᵢ |i⟩
+        Circuit that prepares |ψ(x)⟩
     
     Notes
     -----
-    Circuit depth is O(2^n) for n qubits - this is unavoidable
-    for exact arbitrary state preparation (Mottonen decomposition).
+    Circuit depth is O(2^n) - this is the Mottonen decomposition.
     """
     n_qubits = int(np.log2(len(x)))
     
-    qc = QuantumCircuit(n_qubits, name="AmplitudeEncode")
-    
-    # Use Qiskit's initialize() which uses Mottonen-like decomposition
-    # This creates the state |ψ⟩ = Σᵢ xᵢ |i⟩
+    qc = QuantumCircuit(n_qubits, name="U(x)")
     qc.initialize(x, range(n_qubits))
     
     return qc
 
 
-def amplitude_encoding_feature_map(num_features: int):
-    """
-    Create parameterized amplitude encoding feature map.
-    
-    WARNING: True amplitude encoding with parameters is complex
-    because initialize() doesn't accept ParameterVector directly.
-    
-    This function creates a template that must be used with
-    assign_parameters or by creating circuits per-sample.
-    
-    For QKSVM kernel computation, use encode_amplitude() directly
-    for each data point.
-    
-    Parameters
-    ----------
-    num_features : int
-        Number of features to encode
-    
-    Returns
-    -------
-    n_qubits : int
-        Number of qubits needed
-    state_dim : int
-        Dimension of quantum state (2^n_qubits)
-    
-    Notes
-    -----
-    For VQC training, amplitude encoding is typically done
-    sample-by-sample rather than with a parameterized circuit.
-    """
-    n_qubits = get_num_qubits(num_features)
-    state_dim = 2 ** n_qubits
-    
-    print(f"\n[INFO] Amplitude Encoding Configuration:")
-    print(f"  Features: {num_features}")
-    print(f"  Qubits: {n_qubits} (logarithmic scaling)")
-    print(f"  State dimension: {state_dim}")
-    print(f"  Circuit depth: O(2^{n_qubits}) = O({state_dim}) gates")
-    print(f"  Encoding: Features in probability AMPLITUDES")
-    
-    return n_qubits, state_dim
+# =============================================================================
+# 2. ANSATZ V(θ): VARIATIONAL LAYERS
+# =============================================================================
 
-
-def build_amplitude_kernel(
-    XA: np.ndarray,
-    XB: np.ndarray,
-    verbose: bool = True,
-) -> np.ndarray:
+def create_ansatz(n_qubits: int, reps: int = 2) -> tuple:
     """
-    Compute quantum kernel matrix using amplitude encoding.
-    
-    For amplitude encoding, the kernel is:
-        K(x, z) = |⟨ψ(x)|ψ(z)⟩|² = |x·z|²
-    
-    where |ψ(x)⟩ = Σᵢ xᵢ|i⟩ (normalized features as amplitudes).
-    
-    This reduces to the squared inner product of normalized feature vectors,
-    which can be computed classically OR via quantum circuit.
-    
-    Parameters
-    ----------
-    XA : np.ndarray of shape (n_A, d)
-        First set of samples (already normalized for amplitude encoding)
-    XB : np.ndarray of shape (n_B, d)  
-        Second set of samples (already normalized for amplitude encoding)
-    verbose : bool
-        Print progress
-    
-    Returns
-    -------
-    K : np.ndarray of shape (n_A, n_B)
-        Kernel matrix where K[i,j] = |⟨ψ(xᵢ)|ψ(zⱼ)⟩|²
-    """
-    n_A, n_B = len(XA), len(XB)
-    
-    if verbose:
-        print(f"[INFO] Computing amplitude encoding kernel ({n_A} x {n_B})...")
-    
-    # For amplitude encoding: K(x,z) = |⟨ψ(x)|ψ(z)⟩|² = |x·z|²
-    # This can be computed classically as squared dot product
-    K = np.abs(XA @ XB.T) ** 2
-    
-    if verbose:
-        print(f"[INFO] Kernel computation complete.")
-    
-    return K
-
-
-def build_amplitude_kernel_quantum(
-    XA: np.ndarray,
-    XB: np.ndarray,
-    verbose: bool = True,
-) -> np.ndarray:
-    """
-    Compute quantum kernel matrix using actual quantum circuits.
-    
-    Uses swap test or statevector simulation to compute
-    K(x, z) = |⟨ψ(x)|ψ(z)⟩|²
-    
-    Parameters
-    ----------
-    XA : np.ndarray of shape (n_A, state_dim)
-        First set of normalized samples
-    XB : np.ndarray of shape (n_B, state_dim)
-        Second set of normalized samples
-    verbose : bool
-        Print progress
-    
-    Returns
-    -------
-    K : np.ndarray of shape (n_A, n_B)
-        Quantum kernel matrix
-    """
-    from qiskit.quantum_info import Statevector
-    
-    n_A, n_B = len(XA), len(XB)
-    K = np.zeros((n_A, n_B))
-    
-    if verbose:
-        print(f"[INFO] Computing quantum amplitude kernel ({n_A} x {n_B})...")
-        total = n_A * n_B
-    
-    for i, x in enumerate(XA):
-        if verbose and (i % 5 == 0 or i == n_A - 1):
-            print(f"  Progress: {i+1}/{n_A} rows")
-        
-        # Create circuit for |ψ(x)⟩
-        qc_x = encode_amplitude(x)
-        sv_x = Statevector.from_instruction(qc_x)
-        
-        for j, z in enumerate(XB):
-            # Create circuit for |ψ(z)⟩
-            qc_z = encode_amplitude(z)
-            sv_z = Statevector.from_instruction(qc_z)
-            
-            # Compute overlap: |⟨ψ(x)|ψ(z)⟩|²
-            overlap = sv_x.inner(sv_z)
-            K[i, j] = np.abs(overlap) ** 2
-    
-    if verbose:
-        print(f"[INFO] Kernel computation complete.")
-    
-    return K
-
-
-def build_amplitude_vqc(num_features: int, reps: int = 2):
-    """
-    Build VQC with amplitude encoding feature map.
+    Create variational ansatz with SU(2) rotation blocks.
     
     Architecture:
-    1. Amplitude Encoding U(x): |0⟩ → |ψ(x)⟩ = Σᵢ xᵢ|i⟩
-       (Uses Mottonen decomposition via initialize())
-    2. Variational Ansatz V(θ): Trainable parameters
+    - Rotation blocks: RX-RZ-RX (complete SU(2) parameterization)
+    - Entanglement: Linear nearest-neighbor CNOT
+    - Layers: reps repetitions
     
-    Note: This returns a template. For training, encode each sample
-    individually using encode_amplitude().
+    For 4 qubits, 2 layers:
+    - Parameters: 4 qubits × 3 rotations × (2 layers + 1) = 36 params
+      (TwoLocal adds initial layer, so total = 3 × n × (reps + 1))
     
     Parameters
     ----------
-    num_features : int
-        Number of features
+    n_qubits : int
+        Number of qubits
+    reps : int
+        Number of ansatz layers/repetitions
+    
+    Returns
+    -------
+    ansatz : QuantumCircuit
+        Parameterized ansatz circuit
+    theta_params : list
+        List of trainable parameters
+    """
+    ansatz = TwoLocal(
+        num_qubits=n_qubits,
+        rotation_blocks=["rx", "rz", "rx"],  # SU(2) decomposition
+        entanglement_blocks="cx",             # CNOT gates
+        entanglement="linear",                # Nearest-neighbor
+        reps=reps,
+    )
+    
+    return ansatz, list(ansatz.parameters)
+
+
+# =============================================================================
+# 3. MEASUREMENT & PREDICTION
+# =============================================================================
+
+def compute_expectation_z0(circuit: QuantumCircuit) -> float:
+    """
+    Compute expectation value ⟨Z₀⟩ for the circuit.
+    
+    The observable is Pauli-Z on qubit 0.
+    
+    Parameters
+    ----------
+    circuit : QuantumCircuit
+        Complete VQC circuit (U(x) + V(θ))
+    
+    Returns
+    -------
+    expectation : float
+        ⟨Z₀⟩ ∈ [-1, 1]
+    """
+    sv = Statevector.from_instruction(circuit)
+    
+    # Create Z₀ observable (Z on qubit 0, I on others)
+    n_qubits = circuit.num_qubits
+    z_string = 'I' * (n_qubits - 1) + 'Z'  # Z on qubit 0
+    observable = SparsePauliOp.from_list([(z_string, 1.0)])
+    
+    expectation = sv.expectation_value(observable).real
+    return expectation
+
+
+def expectation_to_probability(expectation: float) -> float:
+    """
+    Convert ⟨Z₀⟩ to probability p₁ (probability of class 1 / AML).
+    
+    p₁ = (1 + ⟨Z₀⟩) / 2
+    
+    Maps [-1, 1] → [0, 1]
+    """
+    return (1 + expectation) / 2
+
+
+def predict_class(probability: float, threshold: float = 0.5) -> int:
+    """
+    Convert probability to class prediction.
+    
+    Returns:
+        0 (ALL) if p₁ < threshold
+        1 (AML) if p₁ >= threshold
+    """
+    return 1 if probability >= threshold else 0
+
+
+# =============================================================================
+# COMPLETE VQC CIRCUIT
+# =============================================================================
+
+def build_vqc_circuit(x: np.ndarray, theta: np.ndarray, n_qubits: int, reps: int = 2) -> QuantumCircuit:
+    """
+    Build complete VQC circuit: U(x) + V(θ).
+    
+    Architecture:
+        |0⟩⊗ⁿ → [Amplitude Encoding U(x)] → [Ansatz V(θ)] → Measure
+    
+    Parameters
+    ----------
+    x : np.ndarray
+        Normalized feature vector (length = 2^n_qubits)
+    theta : np.ndarray
+        Trainable parameters for ansatz
+    n_qubits : int
+        Number of qubits
     reps : int
         Number of ansatz layers
     
     Returns
     -------
-    ansatz : QuantumCircuit
-        Variational ansatz (to be appended after amplitude encoding)
-    theta_params : list
-        Trainable parameters
-    n_qubits : int
-        Number of qubits
+    qc : QuantumCircuit
+        Complete VQC circuit with bound parameters
     """
+    # 1. Feature Map U(x): Amplitude Encoding
+    qc = QuantumCircuit(n_qubits, name="VQC")
+    qc.compose(encode_amplitude(x), inplace=True)
+    qc.barrier(label="U(x)|V(θ)")
+    
+    # 2. Ansatz V(θ)
+    ansatz, theta_params = create_ansatz(n_qubits, reps)
+    
+    # Bind parameters
+    param_dict = {theta_params[i]: theta[i] for i in range(len(theta_params))}
+    bound_ansatz = ansatz.assign_parameters(param_dict)
+    
+    qc.compose(bound_ansatz, inplace=True)
+    
+    return qc
+
+
+def forward_pass(x: np.ndarray, theta: np.ndarray, n_qubits: int, reps: int = 2) -> float:
+    """
+    Forward pass through VQC.
+    
+    Returns probability p₁ (probability of AML).
+    """
+    qc = build_vqc_circuit(x, theta, n_qubits, reps)
+    expectation = compute_expectation_z0(qc)
+    probability = expectation_to_probability(expectation)
+    return probability
+
+
+# =============================================================================
+# VQC CLASS
+# =============================================================================
+
+class AmplitudeEncodedVQC:
+    """
+    Amplitude-Encoded Variational Quantum Classifier.
+    
+    Architecture:
+    1. U(x): Amplitude encoding (Mottonen decomposition)
+    2. V(θ): RX-RZ-RX ansatz with linear CNOT
+    3. Measurement: ⟨Z₀⟩ → p₁ = P(AML)
+    
+    Parameters
+    ----------
+    num_features : int
+        Number of input features (e.g., 16 genes)
+    reps : int
+        Number of ansatz layers (default: 2)
+    learning_rate : float
+        Learning rate for gradient descent
+    """
+    
+    def __init__(self, num_features: int, reps: int = 2, learning_rate: float = 0.1):
+        self.num_features = num_features
+        self.n_qubits = get_num_qubits(num_features)
+        self.state_dim = 2 ** self.n_qubits
+        self.reps = reps
+        self.learning_rate = learning_rate
+        
+        # Create ansatz to get parameter count
+        ansatz, theta_params = create_ansatz(self.n_qubits, reps)
+        self.n_params = len(theta_params)
+        
+        # Initialize parameters randomly
+        np.random.seed(42)
+        self.theta = np.random.uniform(-np.pi, np.pi, self.n_params)
+        
+        # Preprocessing
+        self.scaler = None
+        
+        self._print_config()
+    
+    def _print_config(self):
+        """Print configuration summary."""
+        print("\n" + "=" * 70)
+        print("AMPLITUDE-ENCODED VQC CONFIGURATION")
+        print("=" * 70)
+        print(f"\n1. FEATURE MAP U(x): Amplitude Encoding")
+        print(f"   • Features: {self.num_features}")
+        print(f"   • Qubits: {self.n_qubits} (log₂({self.num_features}) = {self.n_qubits})")
+        print(f"   • State dimension: {self.state_dim}")
+        print(f"   • Method: Mottonen Decomposition (via initialize())")
+        print(f"   • Depth: O(2^{self.n_qubits}) = O({self.state_dim}) gates")
+        print(f"\n2. ANSATZ V(θ): Variational Layers")
+        print(f"   • Rotation blocks: RX-RZ-RX (SU(2) parameterization)")
+        print(f"   • Entanglement: Linear nearest-neighbor CNOT")
+        print(f"   • Layers: {self.reps}")
+        print(f"   • Trainable parameters: {self.n_params}")
+        print(f"   • Formula: {self.n_qubits} qubits × 3 rotations × ({self.reps}+1) = {self.n_params}")
+        print(f"\n3. MEASUREMENT & PREDICTION")
+        print(f"   • Observable: ⟨Z₀⟩ (Pauli-Z on qubit 0)")
+        print(f"   • Prediction: p₁ = (1 + ⟨Z₀⟩) / 2")
+        print(f"   • Output: P(AML) ∈ [0, 1]")
+        print("=" * 70 + "\n")
+    
+    def _preprocess(self, X: np.ndarray, fit: bool = False):
+        """Preprocess features for amplitude encoding."""
+        n_samples = X.shape[0]
+        
+        if fit:
+            self.scaler = StandardScaler()
+            X_scaled = self.scaler.fit_transform(X)
+        else:
+            X_scaled = self.scaler.transform(X)
+        
+        X_prepared = np.zeros((n_samples, self.state_dim))
+        for i in range(n_samples):
+            padded = pad_to_power_of_2(X_scaled[i])
+            X_prepared[i] = normalize_features(padded)
+        
+        return X_prepared
+    
+    def _forward(self, x: np.ndarray) -> float:
+        """Forward pass for single sample."""
+        return forward_pass(x, self.theta, self.n_qubits, self.reps)
+    
+    def _compute_gradient(self, x: np.ndarray, y: int, epsilon: float = 0.01) -> np.ndarray:
+        """
+        Compute gradient using parameter-shift rule.
+        
+        ∂f/∂θᵢ = [f(θ + π/2·eᵢ) - f(θ - π/2·eᵢ)] / 2
+        """
+        gradients = np.zeros(self.n_params)
+        
+        for i in range(self.n_params):
+            # θ + π/2
+            theta_plus = self.theta.copy()
+            theta_plus[i] += np.pi / 2
+            f_plus = forward_pass(x, theta_plus, self.n_qubits, self.reps)
+            
+            # θ - π/2
+            theta_minus = self.theta.copy()
+            theta_minus[i] -= np.pi / 2
+            f_minus = forward_pass(x, theta_minus, self.n_qubits, self.reps)
+            
+            # Gradient
+            gradients[i] = (f_plus - f_minus) / 2
+        
+        # Scale by loss gradient (for binary cross-entropy)
+        p = self._forward(x)
+        p = np.clip(p, 1e-10, 1 - 1e-10)
+        
+        if y == 1:
+            loss_grad = -1 / p
+        else:
+            loss_grad = 1 / (1 - p)
+        
+        return gradients * loss_grad
+    
+    def fit(self, X: np.ndarray, y: np.ndarray, epochs: int = 50, verbose: bool = True):
+        """
+        Train the VQC.
+        
+        Parameters
+        ----------
+        X : np.ndarray of shape (n_samples, n_features)
+            Training features
+        y : np.ndarray of shape (n_samples,)
+            Training labels (0 or 1)
+        epochs : int
+            Number of training epochs
+        verbose : bool
+            Print progress
+        """
+        if verbose:
+            print("\n" + "=" * 70)
+            print("TRAINING AMPLITUDE-ENCODED VQC")
+            print("=" * 70)
+            print(f"Samples: {len(X)}")
+            print(f"Features: {X.shape[1]}")
+            print(f"Epochs: {epochs}")
+            print(f"Learning rate: {self.learning_rate}")
+            print("=" * 70 + "\n")
+        
+        # Preprocess
+        X_prepared = self._preprocess(X, fit=True)
+        
+        for epoch in range(epochs):
+            total_loss = 0
+            correct = 0
+            
+            for i in range(len(X_prepared)):
+                x = X_prepared[i]
+                label = y[i]
+                
+                # Forward pass
+                p = self._forward(x)
+                
+                # Loss (binary cross-entropy)
+                p_clipped = np.clip(p, 1e-10, 1 - 1e-10)
+                loss = -label * np.log(p_clipped) - (1 - label) * np.log(1 - p_clipped)
+                total_loss += loss
+                
+                # Prediction
+                pred = predict_class(p)
+                if pred == label:
+                    correct += 1
+                
+                # Gradient descent (every sample for SGD)
+                grad = self._compute_gradient(x, label)
+                self.theta -= self.learning_rate * grad
+            
+            avg_loss = total_loss / len(X_prepared)
+            accuracy = correct / len(X_prepared)
+            
+            if verbose and (epoch % 5 == 0 or epoch == epochs - 1):
+                print(f"Epoch {epoch+1:3d}/{epochs}: Loss = {avg_loss:.4f}, Accuracy = {accuracy:.4f}")
+        
+        if verbose:
+            print("\n" + "=" * 70)
+            print("TRAINING COMPLETE")
+            print("=" * 70 + "\n")
+    
+    def predict_proba(self, X: np.ndarray) -> np.ndarray:
+        """Predict probabilities P(AML) for each sample."""
+        X_prepared = self._preprocess(X, fit=False)
+        probas = np.array([self._forward(x) for x in X_prepared])
+        return probas
+    
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        """Predict class labels."""
+        probas = self.predict_proba(X)
+        return (probas >= 0.5).astype(int)
+    
+    def score(self, X: np.ndarray, y: np.ndarray) -> float:
+        """Compute accuracy."""
+        predictions = self.predict(X)
+        return accuracy_score(y, predictions)
+    
+    def get_circuit(self, x: np.ndarray) -> QuantumCircuit:
+        """Get the full VQC circuit for a sample."""
+        x_prepared = self._preprocess(x.reshape(1, -1), fit=False)[0]
+        return build_vqc_circuit(x_prepared, self.theta, self.n_qubits, self.reps)
+
+
+# =============================================================================
+# DEMONSTRATION
+# =============================================================================
+
+def demonstrate_vqc_architecture():
+    """Demonstrate the VQC architecture."""
+    
+    print("\n" + "=" * 70)
+    print("AMPLITUDE-ENCODED VQC DEMONSTRATION (16 features → 4 qubits)")
+    print("=" * 70)
+    
+    num_features = 16
     n_qubits = get_num_qubits(num_features)
-    state_dim = 2 ** n_qubits
+    reps = 2
     
-    # Create variational ansatz
-    ansatz = TwoLocal(
-        num_qubits=n_qubits,
-        rotation_blocks=["ry", "rz"],
-        entanglement_blocks="cx",
-        entanglement="linear",
-        reps=reps,
-    )
+    # Example normalized features
+    np.random.seed(42)
+    x = np.random.randn(num_features)
+    x_padded = pad_to_power_of_2(x)
+    x_norm = normalize_features(x_padded)
     
-    n_params = ansatz.num_parameters
+    print(f"\nInput: {num_features} gene expression features")
+    print(f"After padding: {len(x_padded)} (nearest power of 2)")
+    print(f"After normalization: L2 norm = {np.linalg.norm(x_norm):.6f}")
     
-    print(f"\n{'='*60}")
-    print(f"TRUE AMPLITUDE ENCODING VQC CONFIGURATION")
-    print(f"{'='*60}")
-    print(f"Features:             {num_features}")
-    print(f"Qubits:               {n_qubits} (logarithmic: ⌈log₂({num_features})⌉)")
-    print(f"State dimension:      {state_dim}")
-    print(f"Encoding:             Mottonen Decomposition (via initialize())")
-    print(f"Encoding depth:       O(2^{n_qubits}) = O({state_dim}) gates")
-    print(f"Ansatz:               TwoLocal (RY-RZ + linear CNOT)")
-    print(f"Ansatz layers:        {reps}")
-    print(f"Trainable params:     {n_params}")
-    print(f"{'='*60}")
-    print(f"\nKey Difference from Angle Encoding:")
-    print(f"  ✗ Angle: Features as ROTATION ANGLES (RY(xᵢ))")
-    print(f"  ✓ Amplitude: Features as STATE AMPLITUDES (|ψ⟩ = Σxᵢ|i⟩)")
-    print(f"{'='*60}\n")
+    # 1. Feature Map U(x)
+    print("\n" + "-" * 70)
+    print("1. FEATURE MAP U(x): AMPLITUDE ENCODING")
+    print("-" * 70)
     
-    return ansatz, list(ansatz.parameters), n_qubits
-
-
-def demonstrate_amplitude_encoding():
-    """Demonstrate true amplitude encoding vs angle encoding."""
+    qc_feature = encode_amplitude(x_norm)
+    qc_feature_decomp = qc_feature.decompose()
     
-    print("\n" + "="*70)
-    print("TRUE AMPLITUDE ENCODING DEMONSTRATION")
-    print("="*70)
+    print(f"   Qubits: {n_qubits}")
+    print(f"   State dimension: {2**n_qubits}")
+    print(f"   Circuit depth (decomposed): {qc_feature_decomp.depth()}")
+    print(f"   Gate count: {qc_feature_decomp.size()}")
+    print(f"\n   High-level circuit:")
+    print(qc_feature.draw(output='text'))
     
-    # Example: 4 features
-    x = np.array([0.5, 0.3, -0.2, 0.4])
-    print(f"\nOriginal features: {x}")
-    print(f"Feature dimension: {len(x)}")
+    # 2. Ansatz V(θ)
+    print("\n" + "-" * 70)
+    print("2. ANSATZ V(θ): VARIATIONAL LAYERS")
+    print("-" * 70)
     
-    # Normalize for amplitude encoding
-    x_norm = normalize_features(x)
-    print(f"\nNormalized features: {x_norm}")
-    print(f"L2 norm: {np.linalg.norm(x_norm):.6f} (should be 1.0)")
+    ansatz, theta_params = create_ansatz(n_qubits, reps)
     
-    # Create amplitude encoding circuit
-    qc = encode_amplitude(x_norm)
+    print(f"   Rotation blocks: RX-RZ-RX (SU(2))")
+    print(f"   Entanglement: Linear CNOT")
+    print(f"   Layers: {reps}")
+    print(f"   Trainable parameters: {len(theta_params)}")
+    print(f"\n   Ansatz circuit:")
+    print(ansatz.decompose().draw(output='text', fold=100))
     
-    print(f"\nAmplitude Encoding Circuit:")
-    print(f"  Qubits: {qc.num_qubits}")
-    print(f"  Depth: {qc.depth()}")
-    print(f"  Gates: {qc.size()}")
+    # 3. Measurement
+    print("\n" + "-" * 70)
+    print("3. MEASUREMENT & PREDICTION")
+    print("-" * 70)
     
-    # Verify state preparation
-    from qiskit.quantum_info import Statevector
-    sv = Statevector.from_instruction(qc)
+    # Build complete circuit
+    theta = np.random.uniform(-np.pi, np.pi, len(theta_params))
+    qc = build_vqc_circuit(x_norm, theta, n_qubits, reps)
     
-    print(f"\nResulting quantum state |ψ⟩:")
-    print(f"  |ψ⟩ = {x_norm[0]:.4f}|00⟩ + {x_norm[1]:.4f}|01⟩ + {x_norm[2]:.4f}|10⟩ + {x_norm[3]:.4f}|11⟩")
-    print(f"\nStatevector amplitudes:")
-    for i, amp in enumerate(sv.data):
-        if np.abs(amp) > 1e-10:
-            print(f"  |{i:02b}⟩: {amp.real:.6f}")
+    expectation = compute_expectation_z0(qc)
+    probability = expectation_to_probability(expectation)
+    prediction = predict_class(probability)
     
-    print(f"\nVerification: Amplitudes match normalized features ✓")
+    print(f"   Observable: ⟨Z₀⟩")
+    print(f"   Expectation value: {expectation:.4f}")
+    print(f"   Probability P(AML): {probability:.4f}")
+    print(f"   Prediction: {'AML (1)' if prediction == 1 else 'ALL (0)'}")
     
-    # Show decomposed circuit
-    print(f"\n{'='*70}")
-    print("DECOMPOSED CIRCUIT (Mottonen Decomposition)")
-    print("="*70)
-    qc_decomposed = qc.decompose().decompose()
-    print(f"Depth after decomposition: {qc_decomposed.depth()}")
-    print(f"Gate count: {qc_decomposed.size()}")
+    print("\n" + "=" * 70)
+    print("VQC ARCHITECTURE SUMMARY")
+    print("=" * 70)
+    print(f"""
+    |0⟩⊗⁴ ──[U(x): Amplitude Encoding]──[V(θ): Ansatz]──[Measure ⟨Z₀⟩]── p₁
     
-    # Compare with angle encoding
-    print(f"\n{'='*70}")
-    print("COMPARISON: AMPLITUDE vs ANGLE ENCODING")
-    print("="*70)
-    print(f"\n{'Property':<25} {'Angle Encoding':<25} {'Amplitude Encoding':<25}")
-    print("-"*75)
-    print(f"{'Features in:':<25} {'Rotation angles':<25} {'State amplitudes':<25}")
-    print(f"{'Gate type:':<25} {'RY(xᵢ)':<25} {'Mottonen decomposition':<25}")
-    print(f"{'Circuit depth:':<25} {'O(1)':<25} {'O(2^n)':<25}")
-    print(f"{'4 features:':<25} {'4 qubits, 4 gates':<25} {'2 qubits, ~6 gates':<25}")
-    print(f"{'16 features:':<25} {'16 qubits, 16 gates':<25} {'4 qubits, ~30 gates':<25}")
-    print(f"{'State representation:':<25} {'|x₀,x₁,...⟩':<25} {'Σxᵢ|i⟩':<25}")
+    U(x): Mottonen Decomposition
+          16 features → 4 qubits
+          O(2⁴) = O(16) gates
+    
+    V(θ): RX-RZ-RX + CNOT layers
+          {len(theta_params)} trainable parameters
+          {reps} repetitions
+    
+    Output: p₁ = (1 + ⟨Z₀⟩) / 2 = P(AML)
+    """)
     
     return qc
 
 
 if __name__ == "__main__":
-    # Run demonstration
-    demonstrate_amplitude_encoding()
-    
-    # Show circuit diagram
-    print("\n" + "="*70)
-    print("AMPLITUDE ENCODING CIRCUIT (4 features)")
-    print("="*70)
-    
-    x = np.array([0.5, 0.3, -0.2, 0.4])
-    x_norm = normalize_features(x)
-    qc = encode_amplitude(x_norm)
-    
-    # Show high-level
-    print("\nHigh-level circuit:")
-    print(qc.draw(output='text'))
-    
-    # Show decomposed
-    print("\nDecomposed circuit (showing Mottonen gates):")
-    qc_decomp = qc.decompose()
-    print(qc_decomp.draw(output='text', fold=80))
+    demonstrate_vqc_architecture()
