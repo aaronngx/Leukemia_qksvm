@@ -1,0 +1,5 @@
+overall_rank,rank_within_class,gene_accession,gene_description,f_score,favors_class
+1,1,Y00787_s_at,INTERLEUKIN-8 PRECURSOR,41.58334475273399,AML
+2,2,M11147_at,FTL Ferritin; light polypeptide,33.111958662271846,AML
+3,1,M13792_at,ADA Adenosine deaminase,12.049803097092418,ALL
+4,2,X00437_s_at,TCRB T-cell receptor; beta cluster,3.155688593581007,ALL

@@ -1,0 +1,9 @@
+overall_rank,rank_within_class,gene_description,gene_accession,snr_score,favors_class
+1,1,C-myb gene extracted from Human (c-myb) gene; complete primary cds; and five complete alternatively spliced cds,U22376_cds2_s_at,1.6805957031214482,ALL
+2,2,CCND3 Cyclin D3,M92287_at,1.6490013637636947,ALL
+3,3,PROTEASOME IOTA CHAIN,X59417_at,1.5629824056893695,ALL
+4,1,FAH Fumarylacetoacetate,M55150_at,-1.5257311544681642,AML
+5,2,Zyxin,X95735_at,-1.5226107646878766,AML
+6,3,GLUTATHIONE S-TRANSFERASE; MICROSOMAL,U46499_at,-1.454912012022064,AML
+7,4,Leukotriene C4 synthase (LTC4S) gene,U50136_rna1_at,-1.3945511851424388,AML
+8,4,Adenosine triphosphatase; calcium,Z69881_at,1.3295308343496737,ALL

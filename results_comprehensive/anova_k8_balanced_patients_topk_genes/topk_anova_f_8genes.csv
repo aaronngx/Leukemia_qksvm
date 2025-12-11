@@ -1,0 +1,9 @@
+rank,gene_accession,gene_description,f_score,favors_class
+1,M55150_at,FAH Fumarylacetoacetate,49.386945196095546,AML
+2,M92287_at,CCND3 Cyclin D3,47.2787064206462,ALL
+3,U22376_cds2_s_at,C-myb gene extracted from Human (c-myb) gene; complete primary cds; and five complete alternatively spliced cds,47.14079136964782,ALL
+4,X59417_at,PROTEASOME IOTA CHAIN,41.9744450257852,ALL
+5,X95735_at,Zyxin,35.905294806218095,AML
+6,U50136_rna1_at,Leukotriene C4 synthase (LTC4S) gene,34.81164381741411,AML
+7,AF009426_at,Clone 22 mRNA; alternative splice variant alpha-1,33.04596695223544,ALL
+8,U57094_at,Small GTP-binding protein mRNA,29.598235093061547,AML
