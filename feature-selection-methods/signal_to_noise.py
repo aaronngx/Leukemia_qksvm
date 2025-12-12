@@ -363,6 +363,40 @@ def split_cross_validation(
     return folds
 
 
+def split_loocv(
+    X: pd.DataFrame,
+    y: np.ndarray,
+    patient_ids: np.ndarray
+):
+    """Split data into Leave-One-Out cross-validation sets.
+
+    For each data point, train on all other points and test on that single point.
+
+    Note: X is (samples x genes) for this function (transposed from main SNR format).
+
+    Returns:
+        List of (X_train, y_train, patient_ids_train, X_test, y_test, patient_ids_test) tuples,
+        one per sample in the dataset.
+    """
+    from sklearn.model_selection import LeaveOneOut
+
+    loo = LeaveOneOut()
+    folds = []
+
+    for train_idx, test_idx in loo.split(X):
+        X_train = X.iloc[train_idx].reset_index(drop=True)
+        y_train = y[train_idx]
+        patient_ids_train = patient_ids[train_idx]
+
+        X_test = X.iloc[test_idx].reset_index(drop=True)
+        y_test = y[test_idx]
+        patient_ids_test = patient_ids[test_idx]
+
+        folds.append((X_train, y_train, patient_ids_train, X_test, y_test, patient_ids_test))
+
+    return folds
+
+
 def run_snr_selection(
     k: int,
     out_dir: str = "results",
@@ -508,6 +542,32 @@ def run_snr_selection(
             fold_test_df.to_csv(out_path / f"fold_{fold_idx}_test_top_{k}_snr.csv", index=False)
 
         print(f"[INFO] {n_folds}-fold CV sets saved (fold_1 through fold_{n_folds})")
+
+    elif validation_strategy["method"] == "loocv":
+        # Leave-One-Out Cross-validation mode
+        print("[INFO] Generating LOOCV folds (this may take a moment)...")
+        # Transpose to (samples x genes) for splitting
+        X_train_T = X_train.loc[topk_genes].T.copy()
+        X_train_T.columns = topk_accessions
+
+        folds = split_loocv(X_train_T, y_train, patient_ids)
+        n_folds = len(folds)
+
+        for fold_idx, (X_tr, y_tr, pids_tr, X_te, y_te, pids_te) in enumerate(folds, start=1):
+            # Fold training set (n-1 samples)
+            fold_train_df = X_tr.copy()
+            fold_train_df["cancer"] = y_tr
+            fold_train_df["patient"] = pids_tr
+            fold_train_df.to_csv(out_path / f"fold_{fold_idx}_train_top_{k}_snr.csv", index=False)
+
+            # Fold test set (1 sample)
+            fold_test_df = X_te.copy()
+            fold_test_df["cancer"] = y_te
+            fold_test_df["patient"] = pids_te
+            fold_test_df.to_csv(out_path / f"fold_{fold_idx}_test_top_{k}_snr.csv", index=False)
+
+        print(f"[INFO] LOOCV sets saved: {n_folds} folds (fold_1 through fold_{n_folds})")
+        print(f"[INFO] Each fold trains on {n_folds-1} samples and tests on 1 sample")
 
     # Independent test set (always generated if available)
     if ind_csv and Path(ind_csv).exists():

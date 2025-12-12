@@ -210,6 +210,38 @@ def split_cross_validation(
     return folds
 
 
+def split_loocv(
+    X: pd.DataFrame,
+    y: pd.Series,
+    patient_ids: pd.Series
+) -> list[tuple[pd.DataFrame, pd.Series, pd.Series, pd.DataFrame, pd.Series, pd.Series]]:
+    """Split data into Leave-One-Out cross-validation sets.
+
+    For each data point, train on all other points and test on that single point.
+
+    Returns:
+        List of (X_train, y_train, patient_ids_train, X_test, y_test, patient_ids_test) tuples,
+        one per sample in the dataset.
+    """
+    from sklearn.model_selection import LeaveOneOut
+
+    loo = LeaveOneOut()
+    folds = []
+
+    for train_idx, test_idx in loo.split(X):
+        X_train = X.iloc[train_idx].reset_index(drop=True)
+        y_train = y.iloc[train_idx].reset_index(drop=True)
+        patient_ids_train = patient_ids.iloc[train_idx].reset_index(drop=True)
+
+        X_test = X.iloc[test_idx].reset_index(drop=True)
+        y_test = y.iloc[test_idx].reset_index(drop=True)
+        patient_ids_test = patient_ids.iloc[test_idx].reset_index(drop=True)
+
+        folds.append((X_train, y_train, patient_ids_train, X_test, y_test, patient_ids_test))
+
+    return folds
+
+
 def run_feature_selection(
     input_train: str,
     input_ind: str | None,
@@ -408,6 +440,28 @@ def run_feature_selection(
             fold_test_df.to_csv(out_path / f"fold_{fold_idx}_test_top_{k}_anova_f.csv", index=False)
 
         print(f"[INFO] {n_folds}-fold CV sets saved (fold_1 through fold_{n_folds})")
+
+    elif validation_strategy["method"] == "loocv":
+        # Leave-One-Out Cross-validation mode
+        print("[INFO] Generating LOOCV folds (this may take a moment)...")
+        folds = split_loocv(X_train[feature_names], y_train, patient_ids)
+        n_folds = len(folds)
+
+        for fold_idx, (X_tr, y_tr, pids_tr, X_te, y_te, pids_te) in enumerate(folds, start=1):
+            # Fold training set (n-1 samples)
+            fold_train_df = X_tr.copy()
+            fold_train_df["cancer"] = y_tr.values
+            fold_train_df["patient"] = pids_tr.values
+            fold_train_df.to_csv(out_path / f"fold_{fold_idx}_train_top_{k}_anova_f.csv", index=False)
+
+            # Fold test set (1 sample)
+            fold_test_df = X_te.copy()
+            fold_test_df["cancer"] = y_te.values
+            fold_test_df["patient"] = pids_te.values
+            fold_test_df.to_csv(out_path / f"fold_{fold_idx}_test_top_{k}_anova_f.csv", index=False)
+
+        print(f"[INFO] LOOCV sets saved: {n_folds} folds (fold_1 through fold_{n_folds})")
+        print(f"[INFO] Each fold trains on {n_folds-1} samples and tests on 1 sample")
 
     # Independent test set (always generated if available)
     if input_ind is not None:

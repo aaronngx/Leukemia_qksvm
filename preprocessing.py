@@ -122,10 +122,11 @@ def ask_validation_strategy():
     print("      2. Cross-validation")
     print("         a. 5-fold CV")
     print("         b. 10-fold CV")
+    print("         c. LOOCV (Leave-One-Out CV)")
 
     while True:
         try:
-            choice = input("      -> (1a/1b/2a/2b): ").lower().strip()
+            choice = input("      -> (1a/1b/2a/2b/2c): ").lower().strip()
             if choice == "1a":
                 return {"method": "split", "ratio": 0.7}
             elif choice == "1b":
@@ -134,8 +135,10 @@ def ask_validation_strategy():
                 return {"method": "cv", "folds": 5}
             elif choice == "2b":
                 return {"method": "cv", "folds": 10}
+            elif choice == "2c":
+                return {"method": "loocv"}
             else:
-                print("      [ERROR] Please enter 1a, 1b, 2a, or 2b")
+                print("      [ERROR] Please enter 1a, 1b, 2a, 2b, or 2c")
         except KeyboardInterrupt:
             print("\n\n[INFO] Cancelled by user")
             sys.exit(0)
@@ -164,6 +167,8 @@ def print_config(k: int, balanced_genes: bool, method: int, use_balanced_patient
     if validation_strategy["method"] == "split":
         ratio = validation_strategy["ratio"]
         print(f"  • Validation: Train/test split ({int(ratio*100)}/{int((1-ratio)*100)})")
+    elif validation_strategy["method"] == "loocv":
+        print(f"  • Validation: LOOCV (Leave-One-Out Cross-Validation)")
     else:
         folds = validation_strategy["folds"]
         print(f"  • Validation: {folds}-fold cross-validation")
@@ -278,6 +283,14 @@ def run_preprocessing():
             print(f"  • Internal split: {int(ratio*100)}/{int((1-ratio)*100)} train/test")
             print("    - train_internal_*.csv → for model training")
             print("    - test_internal_*.csv → for hyperparameter tuning")
+        elif validation_strategy["method"] == "loocv":
+            if use_balanced_patients:
+                n_samples = 22  # 11 ALL + 11 AML
+            else:
+                n_samples = 38  # 27 ALL + 11 AML
+            print(f"  • Cross-validation: LOOCV (Leave-One-Out)")
+            print(f"    - {n_samples} iterations (one per patient)")
+            print(f"    - fold_1_train/test through fold_{n_samples}_train/test")
         else:
             folds = validation_strategy["folds"]
             print(f"  • Cross-validation: {folds}-fold stratified CV")
@@ -338,6 +351,14 @@ def run_preprocessing():
             print("  2. Tune hyperparameters using test_internal_*.csv")
             print("  3. Test final model on independent_*.csv for validation")
             print("  4. Report accuracy on independent set as final result")
+        elif validation_strategy["method"] == "loocv":
+            print("  1. Use LOOCV folds (fold_*_train/test) for exhaustive validation")
+            print("  2. Train on (n-1) samples, test on 1 sample per fold")
+            print("  3. Average performance across all folds for robust estimation")
+            print("  4. Test final model on independent_*.csv for validation")
+            print("  5. Report accuracy on independent set as final result")
+            print()
+            print("  NOTE: LOOCV provides low-bias estimates but can be computationally expensive")
         else:
             print("  1. Use CV folds (fold_*_train/test) for model training and validation")
             print("  2. Tune hyperparameters using CV results")
