@@ -166,6 +166,11 @@ def train_eval_qksvm(
     kernel_method: KernelMethod = KernelMethod.STATEVECTOR,
     backend_type: BackendType = BackendType.STATEVECTOR,
     max_bond_dimension: int = 100,
+    # ENSGA optimization (optional)
+    use_ensga: bool = False,
+    ensga_pop_size: int = 30,
+    ensga_generations: int = 50,
+    C: float = 1.0,
 ):
     """
     Train and evaluate QKSVM with quantum kernel.
@@ -194,6 +199,14 @@ def train_eval_qksvm(
         STATEVECTOR or TENSOR_NETWORK (for statevector kernel method).
     max_bond_dimension : int
         For TENSOR_NETWORK backend.
+    use_ensga : bool
+        If True, use ENSGA to optimize SVM parameters (C, gamma).
+    ensga_pop_size : int
+        ENSGA population size (if use_ensga=True).
+    ensga_generations : int
+        ENSGA generations (if use_ensga=True).
+    C : float
+        SVM regularization parameter (if use_ensga=False).
     """
     out_path = Path(output_dir)
     out_path.mkdir(parents=True, exist_ok=True)
@@ -263,8 +276,26 @@ def train_eval_qksvm(
         max_bond_dimension=max_bond_dimension,
     )
 
-    clf = SVC(kernel="precomputed", C=1.0)
-    clf.fit(K_train, y_train)
+    # Train SVM (with optional ENSGA optimization)
+    if use_ensga:
+        print("[INFO] Optimizing SVM parameters with ENSGA...")
+        from ensga_optimizer import train_qsvm_ndsgoa
+        
+        ensga_results = train_qsvm_ndsgoa(
+            K_train, y_train,
+            pop_size=ensga_pop_size,
+            n_generations=ensga_generations,
+            verbose=True,
+        )
+        clf = ensga_results['model'].svm
+        optimized_C = ensga_results['best_C']
+        optimized_gamma = ensga_results['best_gamma']
+        print(f"[INFO] ENSGA optimized: C={optimized_C:.4f}, gamma={optimized_gamma:.4f}")
+    else:
+        clf = SVC(kernel="precomputed", C=C)
+        clf.fit(K_train, y_train)
+        optimized_C = C
+        optimized_gamma = None
 
     # Save trained model
     print("[INFO] Saving trained model...")
@@ -276,6 +307,9 @@ def train_eval_qksvm(
         "backend_type": backend_type.value,
         "max_bond_dimension": max_bond_dimension,
         "n_features": n_features,
+        "optimized_C": optimized_C,
+        "optimized_gamma": optimized_gamma,
+        "use_ensga": use_ensga,
     }
     joblib.dump(model_data, out_path / f"qksvm_model_{timestamp}.pkl")
 
@@ -322,6 +356,10 @@ def train_eval_qksvm(
         results_text.append("Simulation type: Exact (Statevector)")
     results_text.append(f"Training samples: {len(X_train)}")
     results_text.append(f"Validation samples: {len(X_val)}")
+    results_text.append(f"\nOptimizer: {'ENSGA' if use_ensga else 'Default'}")
+    results_text.append(f"SVM C parameter: {optimized_C:.4f}")
+    if optimized_gamma is not None:
+        results_text.append(f"Kernel gamma: {optimized_gamma:.4f}")
     results_text.append("\n" + "=" * 60)
     results_text.append("VALIDATION SET RESULTS")
     results_text.append("=" * 60)
@@ -396,6 +434,11 @@ def run_qksvm_from_csv(
     max_bond_dimension: int = 100,
     test_size: float = 0.3,
     seed: int = 42,
+    # ENSGA parameters (optional)
+    use_ensga: bool = False,
+    ensga_pop_size: int = 30,
+    ensga_generations: int = 50,
+    C: float = 1.0,
 ):
     """
     Convenience wrapper: load CSVs and run QKSVM end-to-end.
@@ -414,12 +457,12 @@ def run_qksvm_from_csv(
             angle_reps=2,
         )
         
-        # BPS Circuit
+        # With ENSGA optimization
         run_qksvm_from_csv(
             train_csv="results/train_top_16_anova_f.csv",
-            encoding_type=EncodingType.ANGLE,
-            angle_encoding_type=AngleEncodingType.BPS_CIRCUIT,
-            angle_reps=1,
+            use_ensga=True,
+            ensga_pop_size=30,
+            ensga_generations=50,
         )
     """
     (X_train, y_train), (X_ind, y_ind) = load_processed(train_csv, ind_csv)
@@ -438,6 +481,10 @@ def run_qksvm_from_csv(
         kernel_method=kernel_method,
         backend_type=backend_type,
         max_bond_dimension=max_bond_dimension,
+        use_ensga=use_ensga,
+        ensga_pop_size=ensga_pop_size,
+        ensga_generations=ensga_generations,
+        C=C,
     )
 
 

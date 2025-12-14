@@ -15,11 +15,11 @@ Supports two encoding types:
 Usage:
     # Angle encoding
     from vqc_golub import train_eval_vqc
-    circuit, clf = train_eval_vqc(X, y, reps=2)
+    circuit, clf = train_eval_vqc(X, y, reps_ansatz=2)
     
     # Amplitude encoding
     from vqc_golub import train_eval_amplitude_vqc
-    clf = train_eval_amplitude_vqc(X, y, reps=1)
+    clf = train_eval_amplitude_vqc(X, y, reps_ansatz=1)
 """
 
 import numpy as np
@@ -79,9 +79,12 @@ def load_processed(train_csv: str, test_csv: str | None = None):
     return (X_train, y_train), (X_test, y_test)
 
 
-def build_vqc(num_features: int, reps: int = 2):
+def build_vqc(num_features: int, reps_ansatz: int = 2):
     """
     Build VQC circuit: angle encoding + TwoLocal ansatz.
+    
+    Note: reps_feature = 1 (FIXED) - Feature map U(x) applied once
+          reps_ansatz ∈ {1,...,5} - Ansatz V(θ) repetitions
 
     Returns
     -------
@@ -89,13 +92,19 @@ def build_vqc(num_features: int, reps: int = 2):
     x_params  : list of feature parameters
     w_params  : list of trainable parameters
     """
+    # Feature map U(x) - applied once (reps_feature = 1)
     feature_map, x_params = angle_encoding_circuit(num_features)
+    
+    # Ansatz V(θ) - configurable repetitions
+    if reps_ansatz < 1 or reps_ansatz > 5:
+        raise ValueError(f"reps_ansatz must be in {{1,...,5}}, got {reps_ansatz}")
+    
     ansatz = TwoLocal(
         num_qubits=num_features,
         rotation_blocks=["rx", "rz", "rx"],
         entanglement_blocks="cx",
         entanglement="linear",
-        reps=reps,
+        reps=reps_ansatz,
     )
 
     from qiskit import QuantumCircuit
@@ -107,32 +116,48 @@ def build_vqc(num_features: int, reps: int = 2):
     return qc, list(x_params), list(ansatz.parameters)
 
 
-def make_optimizer(name: str, max_iter: int = 200):
+def make_optimizer(name: str, max_iter: int = 200, **kwargs):
     """
     Create an optimizer by name.
 
     Supported:
-      - 'COBYLA'
-      - 'SPSA'
-      - 'ADAM'
+      - 'COBYLA': Constrained Optimization BY Linear Approximations
+      - 'SPSA': Simultaneous Perturbation Stochastic Approximation
+      - 'ADAM': Adaptive Moment Estimation
+      - 'ENSGA': Elitist Non-Dominated Sorting Genetic Algorithm (returns None, handled separately)
+    
+    Parameters
+    ----------
+    name : str
+        Optimizer name
+    max_iter : int
+        Maximum iterations
+    **kwargs : dict
+        Additional optimizer-specific parameters:
+        - SPSA: learning_rate, perturbation
+        - ADAM: lr, beta_1, beta_2
     """
     name = name.lower()
     if name == "cobyla":
         return COBYLA(maxiter=max_iter)
     if name == "spsa":
-        # SPSA is stochastic; this is a reasonable default
-        return SPSA(maxiter=max_iter)
+        learning_rate = kwargs.get('learning_rate', 0.05)
+        perturbation = kwargs.get('perturbation', 0.1)
+        return SPSA(maxiter=max_iter, learning_rate=learning_rate, perturbation=perturbation)
     if name == "adam":
-        # ADAM supports many hyperparams; keep defaults except maxiter
-        return ADAM(maxiter=max_iter)
-    raise ValueError(f"Unknown optimizer name: {name}. Use 'COBYLA', 'SPSA', or 'ADAM'.")
+        lr = kwargs.get('lr', 0.01)
+        return ADAM(maxiter=max_iter, lr=lr)
+    if name == "ensga":
+        # ENSGA is handled separately in training loop
+        return None
+    raise ValueError(f"Unknown optimizer: {name}. Use 'COBYLA', 'SPSA', 'ADAM', or 'ENSGA'.")
 
 
 def train_eval_vqc(
     X: np.ndarray,
     y: np.ndarray,
     ind_data: tuple[np.ndarray, np.ndarray] | None = None,
-    reps: int = 2,
+    reps_ansatz: int = 2,
     test_size: float = 0.3,
     seed: int = 42,
     output_dir: str = "results_vqc",  # placeholder for future saving
@@ -143,6 +168,8 @@ def train_eval_vqc(
 ):
     """
     Train and evaluate a Variational Quantum Classifier (VQC).
+    
+    Note: reps_feature = 1 (FIXED) - Feature map U(x) applied once
 
     Parameters
     ----------
@@ -150,8 +177,8 @@ def train_eval_vqc(
         Features and labels.
     ind_data : (X_ind, y_ind) or None
         Independent test set (optional).
-    reps : int
-        Number of TwoLocal repetitions.
+    reps_ansatz : int
+        Number of ansatz V(θ) repetitions. Range: {1, 2, 3, 4, 5}
     test_size : float
         Validation split fraction.
     seed : int
@@ -165,7 +192,7 @@ def train_eval_vqc(
     max_iter : int
         Max optimizer iterations.
     optimizer_name : str
-        'COBYLA', 'SPSA', or 'ADAM'.
+        'COBYLA', 'SPSA', 'ADAM', or 'ENSGA'.
     """
     n_features = X.shape[1]
     backend_info = get_backend_info(backend_type, n_features)
@@ -175,7 +202,8 @@ def train_eval_vqc(
     print("=" * 70)
     print(f"Backend: {backend_type.value}")
     print(f"Number of qubits / features: {n_features}")
-    print(f"Ansatz repetitions: {reps}")
+    print(f"reps_feature: 1 (FIXED)")
+    print(f"reps_ansatz: {reps_ansatz} (configurable 1-5)")
     print(f"Optimizer: {optimizer_name.upper()}")
     print(f"Max iterations: {max_iter}")
     print(f"State dimension: {backend_info['state_dimension']:,}")
@@ -197,7 +225,7 @@ def train_eval_vqc(
     )
 
     # Build VQC circuit
-    circuit, x_params, w_params = build_vqc(n_features, reps=reps)
+    circuit, x_params, w_params = build_vqc(n_features, reps_ansatz=reps_ansatz)
 
     # Backend-specific Estimator
     print(f"[INFO] Initializing {backend_type.value} backend...")
@@ -253,7 +281,7 @@ def run_vqc_from_csv(
     ind_csv: str | None = "data/processed/independent_topk_snr.csv",
     backend_type: BackendType = BackendType.STATEVECTOR,
     max_bond_dimension: int = 100,
-    reps: int = 2,
+    reps_ansatz: int = 2,
     max_iter: int = 200,
     optimizer_name: str = "COBYLA",
     test_size: float = 0.3,
@@ -261,6 +289,9 @@ def run_vqc_from_csv(
 ):
     """
     Convenience wrapper: load CSVs and run VQC end-to-end.
+    
+    Note: reps_feature = 1 (FIXED) - Feature map U(x) applied once
+          reps_ansatz ∈ {1,...,5} - Ansatz V(θ) repetitions
 
     Example (in notebook):
 
@@ -273,7 +304,7 @@ def run_vqc_from_csv(
                 ind_csv="data/processed/independent_topk_snr.csv",
                 backend_type=BackendType.TENSOR_NETWORK,
                 max_bond_dimension=100,
-                reps=2,
+                reps_ansatz=2,
                 max_iter=200,
                 optimizer_name=opt,
             )
@@ -285,7 +316,7 @@ def run_vqc_from_csv(
         X_train,
         y_train,
         ind_data=ind_data,
-        reps=reps,
+        reps_ansatz=reps_ansatz,
         test_size=test_size,
         seed=seed,
         output_dir="results_vqc",
@@ -300,7 +331,7 @@ def run_vqc_from_csv(
 # AMPLITUDE ENCODING VQC
 # =============================================================================
 
-def build_amplitude_vqc_circuit(x: np.ndarray, theta: np.ndarray, n_qubits: int, reps: int = 1):
+def build_amplitude_vqc_circuit(x: np.ndarray, theta: np.ndarray, n_qubits: int, reps_ansatz: int = 1):
     """
     Build complete amplitude VQC circuit: U(x) + V(θ).
     
@@ -315,8 +346,8 @@ def build_amplitude_vqc_circuit(x: np.ndarray, theta: np.ndarray, n_qubits: int,
         Trainable parameters for ansatz
     n_qubits : int
         Number of qubits
-    reps : int
-        Number of ansatz layers
+    reps_ansatz : int
+        Number of ansatz V(θ) repetitions. Range: {1, 2, 3, 4, 5}
     
     Returns
     -------
@@ -324,12 +355,13 @@ def build_amplitude_vqc_circuit(x: np.ndarray, theta: np.ndarray, n_qubits: int,
         Complete VQC circuit with bound parameters
     """
     # 1. Feature Map U(x): Amplitude Encoding (Mottonen Decomposition)
+    # Note: reps_feature = 1 (FIXED) - applied once
     qc = QuantumCircuit(n_qubits, name="AmplitudeVQC")
     qc.compose(encode_amplitude(x), inplace=True)
     qc.barrier(label="U(x)|V(θ)")
     
     # 2. Ansatz V(θ): RX-RZ-RX + linear CNOT
-    ansatz, theta_params = create_amplitude_ansatz(n_qubits, reps)
+    ansatz, theta_params = create_amplitude_ansatz(n_qubits, reps_ansatz)
     
     # Bind parameters
     param_dict = {theta_params[i]: theta[i] for i in range(len(theta_params))}
@@ -366,20 +398,20 @@ def compute_expectation_z0(circuit: QuantumCircuit) -> float:
     return sv.expectation_value(observable).real
 
 
-def amplitude_vqc_forward(x: np.ndarray, theta: np.ndarray, n_qubits: int, reps: int) -> float:
+def amplitude_vqc_forward(x: np.ndarray, theta: np.ndarray, n_qubits: int, reps_ansatz: int) -> float:
     """
     Forward pass through amplitude VQC.
     
     Returns probability p₁ = (1 + ⟨Z₀⟩) / 2 = P(AML).
     """
-    qc = build_amplitude_vqc_circuit(x, theta, n_qubits, reps)
+    qc = build_amplitude_vqc_circuit(x, theta, n_qubits, reps_ansatz)
     expectation = compute_expectation_z0(qc)
     # Convert to probability: p₁ = (1 + ⟨Z₀⟩) / 2
     return (1 + expectation) / 2
 
 
 def amplitude_vqc_gradient(x: np.ndarray, y: int, theta: np.ndarray, 
-                           n_qubits: int, reps: int) -> np.ndarray:
+                           n_qubits: int, reps_ansatz: int) -> np.ndarray:
     """
     Compute gradient using parameter-shift rule.
     
@@ -392,18 +424,18 @@ def amplitude_vqc_gradient(x: np.ndarray, y: int, theta: np.ndarray,
         # θ + π/2
         theta_plus = theta.copy()
         theta_plus[i] += np.pi / 2
-        f_plus = amplitude_vqc_forward(x, theta_plus, n_qubits, reps)
+        f_plus = amplitude_vqc_forward(x, theta_plus, n_qubits, reps_ansatz)
         
         # θ - π/2
         theta_minus = theta.copy()
         theta_minus[i] -= np.pi / 2
-        f_minus = amplitude_vqc_forward(x, theta_minus, n_qubits, reps)
+        f_minus = amplitude_vqc_forward(x, theta_minus, n_qubits, reps_ansatz)
         
         # Parameter-shift gradient
         gradients[i] = (f_plus - f_minus) / 2
     
     # Scale by loss gradient (binary cross-entropy)
-    p = amplitude_vqc_forward(x, theta, n_qubits, reps)
+    p = amplitude_vqc_forward(x, theta, n_qubits, reps_ansatz)
     p = np.clip(p, 1e-10, 1 - 1e-10)
     
     if y == 1:
@@ -412,6 +444,250 @@ def amplitude_vqc_gradient(x: np.ndarray, y: int, theta: np.ndarray,
         loss_grad = 1 / (1 - p)
     
     return gradients * loss_grad
+
+
+# =============================================================================
+# OPTIMIZER-SPECIFIC TRAINING FUNCTIONS
+# =============================================================================
+
+def _train_amplitude_vqc_spsa_adam(
+    X_train: np.ndarray,
+    y_train: np.ndarray,
+    theta: np.ndarray,
+    n_qubits: int,
+    reps: int,
+    epochs: int = 50,
+    learning_rate: float = 0.1,
+    optimizer_name: str = "SPSA",
+    verbose: bool = True,
+) -> np.ndarray:
+    """Train amplitude VQC using SPSA or ADAM optimizer."""
+    
+    if optimizer_name == "ADAM":
+        # ADAM parameters
+        beta1, beta2 = 0.9, 0.999
+        eps = 1e-8
+        m = np.zeros_like(theta)  # First moment
+        v = np.zeros_like(theta)  # Second moment
+    
+    for epoch in range(epochs):
+        total_loss = 0
+        correct = 0
+        
+        # Compute batch gradient
+        batch_grad = np.zeros_like(theta)
+        
+        for i in range(len(X_train)):
+            x = X_train[i]
+            label = y_train[i]
+            
+            # Forward pass
+            p = amplitude_vqc_forward(x, theta, n_qubits, reps_ansatz)
+            
+            # Loss
+            p_clipped = np.clip(p, 1e-10, 1 - 1e-10)
+            loss = -label * np.log(p_clipped) - (1 - label) * np.log(1 - p_clipped)
+            total_loss += loss
+            
+            # Prediction
+            pred = 1 if p >= 0.5 else 0
+            if pred == label:
+                correct += 1
+            
+            # Accumulate gradient
+            grad = amplitude_vqc_gradient(x, label, theta, n_qubits, reps_ansatz)
+            batch_grad += grad
+        
+        batch_grad /= len(X_train)
+        
+        if optimizer_name == "ADAM":
+            # ADAM update
+            m = beta1 * m + (1 - beta1) * batch_grad
+            v = beta2 * v + (1 - beta2) * (batch_grad ** 2)
+            m_hat = m / (1 - beta1 ** (epoch + 1))
+            v_hat = v / (1 - beta2 ** (epoch + 1))
+            theta -= learning_rate * m_hat / (np.sqrt(v_hat) + eps)
+        else:
+            # SPSA-style update (with some noise)
+            perturbation = 0.1 / (epoch + 1) ** 0.602
+            delta = np.random.choice([-1, 1], size=len(theta))
+            theta -= learning_rate * batch_grad + perturbation * delta
+        
+        avg_loss = total_loss / len(X_train)
+        train_acc = correct / len(X_train)
+        
+        if verbose and (epoch % 10 == 0 or epoch == epochs - 1):
+            print(f"  Epoch {epoch+1:3d}/{epochs}: Loss = {avg_loss:.4f}, Train Acc = {train_acc:.4f}")
+    
+    return theta
+
+
+def _train_amplitude_vqc_cobyla(
+    X_train: np.ndarray,
+    y_train: np.ndarray,
+    theta_init: np.ndarray,
+    n_qubits: int,
+    reps: int,
+    max_iter: int = 100,
+    verbose: bool = True,
+) -> np.ndarray:
+    """Train amplitude VQC using COBYLA (derivative-free) optimizer."""
+    from scipy.optimize import minimize
+    
+    iteration_count = [0]
+    
+    def loss_fn(theta):
+        total_loss = 0
+        for i in range(len(X_train)):
+            x = X_train[i]
+            label = y_train[i]
+            p = amplitude_vqc_forward(x, theta, n_qubits, reps_ansatz)
+            p_clipped = np.clip(p, 1e-10, 1 - 1e-10)
+            loss = -label * np.log(p_clipped) - (1 - label) * np.log(1 - p_clipped)
+            total_loss += loss
+        
+        avg_loss = total_loss / len(X_train)
+        
+        iteration_count[0] += 1
+        if verbose and iteration_count[0] % 20 == 0:
+            # Calculate accuracy
+            correct = sum(
+                1 for i in range(len(X_train))
+                if (amplitude_vqc_forward(X_train[i], theta, n_qubits, reps) >= 0.5) == y_train[i]
+            )
+            acc = correct / len(X_train)
+            print(f"  Iter {iteration_count[0]:3d}: Loss = {avg_loss:.4f}, Train Acc = {acc:.4f}")
+        
+        return avg_loss
+    
+    result = minimize(
+        loss_fn,
+        theta_init,
+        method='COBYLA',
+        options={'maxiter': max_iter, 'rhobeg': 0.5}
+    )
+    
+    return result.x
+
+
+def _train_amplitude_vqc_ensga(
+    X_train: np.ndarray,
+    y_train: np.ndarray,
+    n_qubits: int,
+    reps: int,
+    n_params: int,
+    pop_size: int = 20,
+    n_generations: int = 30,
+    seed: int = 42,
+    verbose: bool = True,
+) -> np.ndarray:
+    """
+    Train amplitude VQC using ENSGA (Elitist Non-Dominated Sorting Genetic Algorithm).
+    
+    Multi-objective optimization:
+    1. Classification error
+    2. Parameter magnitude (regularization)
+    """
+    from ensga_optimizer import ENSGA, Individual, Population, non_dominated_sort
+    
+    np.random.seed(seed)
+    
+    def evaluate_individual(theta: np.ndarray) -> np.ndarray:
+        """Compute objectives for an individual."""
+        # Objective 1: Classification error
+        correct = 0
+        total_loss = 0
+        for i in range(len(X_train)):
+            x = X_train[i]
+            label = y_train[i]
+            p = amplitude_vqc_forward(x, theta, n_qubits, reps_ansatz)
+            
+            # Loss
+            p_clipped = np.clip(p, 1e-10, 1 - 1e-10)
+            loss = -label * np.log(p_clipped) - (1 - label) * np.log(1 - p_clipped)
+            total_loss += loss
+            
+            # Accuracy
+            pred = 1 if p >= 0.5 else 0
+            if pred == label:
+                correct += 1
+        
+        error = 1.0 - correct / len(X_train)
+        avg_loss = total_loss / len(X_train)
+        
+        # Objective 2: Parameter magnitude (regularization)
+        param_norm = np.linalg.norm(theta) / n_params
+        
+        return np.array([error, param_norm])
+    
+    # Initialize population
+    population = Population()
+    for _ in range(pop_size):
+        genes = np.random.uniform(-np.pi, np.pi, n_params)
+        ind = Individual(genes=genes)
+        ind.objectives = evaluate_individual(genes)
+        population.append(ind)
+    
+    # Evolution loop
+    for gen in range(n_generations):
+        # Create offspring
+        offspring = Population()
+        while len(offspring) < pop_size:
+            # Tournament selection
+            idx1 = np.random.randint(0, len(population))
+            idx2 = np.random.randint(0, len(population))
+            parent1 = population[idx1] if population[idx1].rank <= population[idx2].rank else population[idx2]
+            
+            idx1 = np.random.randint(0, len(population))
+            idx2 = np.random.randint(0, len(population))
+            parent2 = population[idx1] if population[idx1].rank <= population[idx2].rank else population[idx2]
+            
+            # Crossover (simple average)
+            alpha = np.random.random()
+            child_genes = alpha * parent1.genes + (1 - alpha) * parent2.genes
+            
+            # Mutation
+            if np.random.random() < 0.2:
+                mutation_idx = np.random.randint(0, n_params)
+                child_genes[mutation_idx] += np.random.normal(0, 0.5)
+                child_genes = np.clip(child_genes, -np.pi, np.pi)
+            
+            child = Individual(genes=child_genes)
+            child.objectives = evaluate_individual(child_genes)
+            offspring.append(child)
+        
+        # Merge and select
+        combined = Population()
+        combined.extend(population.individuals)
+        combined.extend(offspring.individuals)
+        
+        # Non-dominated sorting
+        fronts = non_dominated_sort(combined)
+        
+        # Select next generation
+        new_pop = Population()
+        front_idx = 0
+        while len(new_pop) + len(fronts[front_idx]) <= pop_size and front_idx < len(fronts):
+            for i in fronts[front_idx]:
+                new_pop.append(combined[i])
+            front_idx += 1
+        
+        # Fill remaining from last front
+        if len(new_pop) < pop_size and front_idx < len(fronts):
+            remaining = pop_size - len(new_pop)
+            for i in fronts[front_idx][:remaining]:
+                new_pop.append(combined[i])
+        
+        population = new_pop
+        
+        # Progress
+        if verbose and (gen + 1) % 10 == 0:
+            best_error = min(ind.objectives[0] for ind in population.individuals)
+            print(f"  Gen {gen+1:3d}/{n_generations}: Best Error = {best_error:.4f}, Acc = {1-best_error:.4f}")
+    
+    # Return best individual
+    best_idx = np.argmin([ind.objectives[0] for ind in population.individuals])
+    return population[best_idx].genes
 
 
 def train_eval_amplitude_vqc(
@@ -423,6 +699,9 @@ def train_eval_amplitude_vqc(
     seed: int = 42,
     epochs: int = 50,
     learning_rate: float = 0.1,
+    optimizer_name: str = "ADAM",
+    ensga_pop_size: int = 20,
+    ensga_generations: int = 30,
     verbose: bool = True,
 ):
     """
@@ -449,9 +728,15 @@ def train_eval_amplitude_vqc(
     seed : int
         Random seed
     epochs : int
-        Training epochs
+        Training epochs (for SGD/SPSA/ADAM)
     learning_rate : float
-        SGD learning rate
+        Learning rate (for SGD/SPSA/ADAM)
+    optimizer_name : str
+        Optimizer: 'ADAM', 'SPSA', 'COBYLA', or 'ENSGA'
+    ensga_pop_size : int
+        ENSGA population size (if optimizer_name='ENSGA')
+    ensga_generations : int
+        ENSGA generations (if optimizer_name='ENSGA')
     verbose : bool
         Print progress
     
@@ -484,9 +769,14 @@ def train_eval_amplitude_vqc(
         print(f"   • Trainable parameters: {n_params}")
         print(f"\n3. MEASUREMENT: ⟨Z₀⟩ → p₁ = (1+⟨Z₀⟩)/2")
         print(f"\n4. TRAINING")
-        print(f"   • Epochs: {epochs}")
-        print(f"   • Learning rate: {learning_rate}")
-        print(f"   • Gradient method: Parameter-shift rule")
+        print(f"   • Optimizer: {optimizer_name.upper()}")
+        if optimizer_name.upper() == "ENSGA":
+            print(f"   • Population: {ensga_pop_size}")
+            print(f"   • Generations: {ensga_generations}")
+        else:
+            print(f"   • Epochs: {epochs}")
+            print(f"   • Learning rate: {learning_rate}")
+            print(f"   • Gradient method: Parameter-shift rule")
         print("=" * 70 + "\n")
     
     # Preprocess for amplitude encoding
@@ -508,43 +798,45 @@ def train_eval_amplitude_vqc(
     np.random.seed(seed)
     theta = np.random.uniform(-np.pi, np.pi, n_params)
     
-    # Training loop
-    if verbose:
-        print(f"\n[INFO] Training with SGD (parameter-shift gradients)...")
+    # Select training method based on optimizer
+    optimizer_name_upper = optimizer_name.upper()
     
-    for epoch in range(epochs):
-        total_loss = 0
-        correct = 0
+    if optimizer_name_upper == "ENSGA":
+        # ENSGA: Multi-objective evolutionary optimization
+        if verbose:
+            print(f"\n[INFO] Training with ENSGA (evolutionary optimization)...")
         
-        # Shuffle training data
-        indices = np.random.permutation(len(X_train))
+        theta = _train_amplitude_vqc_ensga(
+            X_train, y_train, n_qubits, reps, n_params,
+            pop_size=ensga_pop_size,
+            n_generations=ensga_generations,
+            seed=seed,
+            verbose=verbose,
+        )
+    
+    elif optimizer_name_upper in ["SPSA", "ADAM"]:
+        # SPSA/ADAM with parameter-shift gradients
+        if verbose:
+            print(f"\n[INFO] Training with {optimizer_name_upper} (parameter-shift gradients)...")
         
-        for idx in indices:
-            x = X_train[idx]
-            label = y_train[idx]
-            
-            # Forward pass
-            p = amplitude_vqc_forward(x, theta, n_qubits, reps)
-            
-            # Loss (binary cross-entropy)
-            p_clipped = np.clip(p, 1e-10, 1 - 1e-10)
-            loss = -label * np.log(p_clipped) - (1 - label) * np.log(1 - p_clipped)
-            total_loss += loss
-            
-            # Prediction
-            pred = 1 if p >= 0.5 else 0
-            if pred == label:
-                correct += 1
-            
-            # Gradient descent
-            grad = amplitude_vqc_gradient(x, label, theta, n_qubits, reps)
-            theta -= learning_rate * grad
+        theta = _train_amplitude_vqc_spsa_adam(
+            X_train, y_train, theta, n_qubits, reps,
+            epochs=epochs,
+            learning_rate=learning_rate,
+            optimizer_name=optimizer_name_upper,
+            verbose=verbose,
+        )
+    
+    else:
+        # COBYLA: Derivative-free optimization (default fallback)
+        if verbose:
+            print(f"\n[INFO] Training with COBYLA (derivative-free)...")
         
-        avg_loss = total_loss / len(X_train)
-        train_acc = correct / len(X_train)
-        
-        if verbose and (epoch % 10 == 0 or epoch == epochs - 1):
-            print(f"  Epoch {epoch+1:3d}/{epochs}: Loss = {avg_loss:.4f}, Train Acc = {train_acc:.4f}")
+        theta = _train_amplitude_vqc_cobyla(
+            X_train, y_train, theta, n_qubits, reps,
+            max_iter=epochs,
+            verbose=verbose,
+        )
     
     # Validation
     if verbose:
@@ -553,7 +845,7 @@ def train_eval_amplitude_vqc(
     y_val_pred = []
     y_val_proba = []
     for x in X_val:
-        p = amplitude_vqc_forward(x, theta, n_qubits, reps)
+        p = amplitude_vqc_forward(x, theta, n_qubits, reps_ansatz)
         y_val_proba.append(p)
         y_val_pred.append(1 if p >= 0.5 else 0)
     
@@ -593,7 +885,7 @@ def train_eval_amplitude_vqc(
         y_ind_pred = []
         y_ind_proba = []
         for x in X_ind_prepared:
-            p = amplitude_vqc_forward(x, theta, n_qubits, reps)
+            p = amplitude_vqc_forward(x, theta, n_qubits, reps_ansatz)
             y_ind_proba.append(p)
             y_ind_pred.append(1 if p >= 0.5 else 0)
         
@@ -624,20 +916,49 @@ def run_amplitude_vqc_from_csv(
     reps: int = 1,
     epochs: int = 50,
     learning_rate: float = 0.1,
+    optimizer_name: str = "ADAM",
+    ensga_pop_size: int = 20,
+    ensga_generations: int = 30,
     test_size: float = 0.3,
     seed: int = 42,
 ):
     """
     Convenience wrapper: load CSVs and run Amplitude VQC.
     
+    Supported optimizers: ADAM, SPSA, COBYLA, ENSGA
+    
     Example:
         from vqc_golub import run_amplitude_vqc_from_csv
         
+        # ADAM (default) - adaptive learning rate
         results = run_amplitude_vqc_from_csv(
             train_csv="results/train_internal_top_16_snr.csv",
             ind_csv="results/independent_top_16_snr.csv",
-            reps=1,
-            epochs=50,
+            optimizer_name="ADAM",
+            epochs=100,
+            learning_rate=0.01,
+        )
+        
+        # SPSA - stochastic perturbation
+        results = run_amplitude_vqc_from_csv(
+            train_csv="results/train_internal_top_16_snr.csv",
+            optimizer_name="SPSA",
+            epochs=100,
+        )
+        
+        # COBYLA - derivative-free
+        results = run_amplitude_vqc_from_csv(
+            train_csv="results/train_internal_top_16_snr.csv",
+            optimizer_name="COBYLA",
+            epochs=100,
+        )
+        
+        # ENSGA - multi-objective evolutionary
+        results = run_amplitude_vqc_from_csv(
+            train_csv="results/train_internal_top_16_snr.csv",
+            optimizer_name="ENSGA",
+            ensga_pop_size=30,
+            ensga_generations=50,
         )
     """
     (X_train, y_train), (X_ind, y_ind) = load_processed(train_csv, ind_csv)
@@ -652,4 +973,7 @@ def run_amplitude_vqc_from_csv(
         seed=seed,
         epochs=epochs,
         learning_rate=learning_rate,
+        optimizer_name=optimizer_name,
+        ensga_pop_size=ensga_pop_size,
+        ensga_generations=ensga_generations,
     )

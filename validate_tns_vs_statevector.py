@@ -414,7 +414,7 @@ def benchmark_classification_accuracy(
     seed: int = 42,
 ):
     """
-    Benchmark classification accuracy vs number of qubits for different encodings.
+    Benchmark QSVM classification accuracy vs number of qubits for different encodings.
     Similar to Figure 16 in the research paper.
     
     Tests how varying levels of entanglement affect accuracy as qubits increase.
@@ -425,7 +425,7 @@ def benchmark_classification_accuracy(
     np.random.seed(seed)
     
     print("\n" + "="*70)
-    print("CLASSIFICATION ACCURACY vs QUBITS (Figure 16)")
+    print("QSVM CLASSIFICATION ACCURACY vs QUBITS (Figure 16)")
     print("="*70)
     
     encodings = [
@@ -483,10 +483,10 @@ def benchmark_classification_accuracy(
                 results[name]["accuracy"].append(acc)
                 results[name]["auroc"].append(auroc)
                 
-                print(f"  {name}: Acc={acc:.2f}, AUROC={auroc:.2f}")
+                print(f"  QSVM {name}: Acc={acc:.2f}, AUROC={auroc:.2f}")
                 
             except Exception as e:
-                print(f"  {name}: ERROR - {e}")
+                print(f"  QSVM {name}: ERROR - {e}")
     
     # Plot Figure 16 equivalent
     fig, axes = plt.subplots(1, 2, figsize=(14, 5))
@@ -496,28 +496,422 @@ def benchmark_classification_accuracy(
     for idx, (name, _) in enumerate(encodings):
         if results[name]["qubits"]:
             axes[0].plot(results[name]["qubits"], results[name]["accuracy"],
-                f'{markers[idx]}-', color=colors[idx], label=name, linewidth=2, markersize=8)
+                f'{markers[idx]}-', color=colors[idx], label=f'QSVM {name}', linewidth=2, markersize=8)
             axes[1].plot(results[name]["qubits"], results[name]["auroc"],
-                f'{markers[idx]}-', color=colors[idx], label=name, linewidth=2, markersize=8)
+                f'{markers[idx]}-', color=colors[idx], label=f'QSVM {name}', linewidth=2, markersize=8)
     
     axes[0].set_xlabel('Number of Qubits', fontsize=12)
     axes[0].set_ylabel('Classification Accuracy', fontsize=12)
-    axes[0].set_title('Accuracy vs Qubits (Figure 16)', fontsize=14)
+    axes[0].set_title('QSVM Accuracy vs Qubits (Figure 16)', fontsize=14)
     axes[0].legend(loc='lower right')
     axes[0].grid(True, alpha=0.3)
     axes[0].set_ylim(0.3, 1.05)
     
     axes[1].set_xlabel('Number of Qubits', fontsize=12)
     axes[1].set_ylabel('AUROC', fontsize=12)
-    axes[1].set_title('AUROC vs Qubits by Encoding', fontsize=14)
+    axes[1].set_title('QSVM AUROC vs Qubits by Encoding', fontsize=14)
     axes[1].legend(loc='lower right')
     axes[1].grid(True, alpha=0.3)
     axes[1].set_ylim(0.3, 1.05)
     
     plt.tight_layout()
-    fig16_path = OUTPUT_DIR / "accuracy_vs_qubits_by_encoding.png"
+    fig16_path = OUTPUT_DIR / "qsvm_accuracy_vs_qubits.png"
     plt.savefig(fig16_path, dpi=300, bbox_inches='tight', facecolor='white')
-    print(f"\nSaved Figure 16 equivalent: {fig16_path}")
+    print(f"\nSaved QSVM accuracy plot: {fig16_path}")
+    plt.close()
+    
+    return results
+
+
+# =============================================================================
+# VQC BENCHMARKS
+# =============================================================================
+
+def vqc_forward_pass(circuit, theta, x_params, theta_params, x_sample):
+    """Single VQC forward pass returning expectation value."""
+    from qiskit.quantum_info import Statevector, SparsePauliOp
+    
+    # Bind parameters
+    param_dict = {}
+    for i, p in enumerate(x_params):
+        param_dict[p] = float(x_sample[i])
+    for i, p in enumerate(theta_params):
+        param_dict[p] = float(theta[i])
+    
+    bound_circuit = circuit.assign_parameters(param_dict)
+    sv = Statevector.from_instruction(bound_circuit)
+    
+    # Z0 expectation
+    n_qubits = circuit.num_qubits
+    z_string = 'I' * (n_qubits - 1) + 'Z'
+    observable = SparsePauliOp.from_list([(z_string, 1.0)])
+    exp_val = sv.expectation_value(observable).real
+    
+    return (1 + exp_val) / 2  # Convert to probability
+
+
+def benchmark_vqc_accuracy(
+    qubit_range: list = [4, 5, 6, 8],
+    n_train: int = 16,
+    n_test: int = 8,
+    reps_ansatz: int = 2,
+    epochs: int = 30,
+    seed: int = 42,
+):
+    """
+    Benchmark VQC classification accuracy vs number of qubits.
+    Compares VQC performance alongside QSVM.
+    """
+    from sklearn.metrics import accuracy_score
+    from qiskit.circuit.library import TwoLocal
+    
+    np.random.seed(seed)
+    
+    print("\n" + "="*70)
+    print("VQC CLASSIFICATION ACCURACY vs QUBITS")
+    print("="*70)
+    print(f"reps_ansatz: {reps_ansatz}, epochs: {epochs}")
+    
+    encodings = [
+        ("Simple RY", AngleEncodingType.SIMPLE_RY),
+        ("ZZ Feature Map", AngleEncodingType.ZZ_FEATURE_MAP),
+    ]
+    
+    results = {name: {"qubits": [], "accuracy": [], "time": []} for name, _ in encodings}
+    
+    for n_qubits in qubit_range:
+        print(f"\n--- {n_qubits} qubits ---")
+        
+        # Generate synthetic data
+        X_train = np.random.uniform(0, np.pi, (n_train, n_qubits))
+        y_train = np.array([0] * (n_train // 2) + [1] * (n_train // 2))
+        X_train[y_train == 1] += 0.3 * np.random.randn(n_train // 2, n_qubits)
+        X_train = np.clip(X_train, 0, np.pi)
+        
+        X_test = np.random.uniform(0, np.pi, (n_test, n_qubits))
+        y_test = np.array([0] * (n_test // 2) + [1] * (n_test // 2))
+        X_test[y_test == 1] += 0.3 * np.random.randn(n_test // 2, n_qubits)
+        X_test = np.clip(X_test, 0, np.pi)
+        
+        for name, enc_type in encodings:
+            try:
+                start_time = time.time()
+                
+                # Build VQC circuit
+                feature_map, x_params = angle_encoding_circuit(n_qubits, encoding_type=enc_type)
+                ansatz = TwoLocal(
+                    num_qubits=n_qubits,
+                    rotation_blocks=["rx", "rz", "rx"],
+                    entanglement_blocks="cx",
+                    entanglement="linear",
+                    reps=reps_ansatz,
+                )
+                
+                circuit = QuantumCircuit(n_qubits)
+                circuit.compose(feature_map, inplace=True)
+                circuit.compose(ansatz, inplace=True)
+                
+                theta_params = list(ansatz.parameters)
+                n_params = len(theta_params)
+                
+                # Initialize parameters
+                theta = np.random.uniform(-np.pi, np.pi, n_params)
+                
+                # Simple training loop
+                lr = 0.1
+                for epoch in range(epochs):
+                    for i in range(len(X_train)):
+                        # Forward pass
+                        p = vqc_forward_pass(circuit, theta, x_params, theta_params, X_train[i])
+                        
+                        # Simple gradient approximation
+                        grad = np.zeros(n_params)
+                        for j in range(n_params):
+                            theta_plus = theta.copy()
+                            theta_plus[j] += np.pi / 4
+                            p_plus = vqc_forward_pass(circuit, theta_plus, x_params, theta_params, X_train[i])
+                            grad[j] = (p_plus - p) * (2 * y_train[i] - 1)
+                        
+                        theta += lr * grad * 0.1
+                
+                # Evaluate
+                y_pred = []
+                for x in X_test:
+                    p = vqc_forward_pass(circuit, theta, x_params, theta_params, x)
+                    y_pred.append(1 if p >= 0.5 else 0)
+                
+                acc = accuracy_score(y_test, y_pred)
+                elapsed = time.time() - start_time
+                
+                results[name]["qubits"].append(n_qubits)
+                results[name]["accuracy"].append(acc)
+                results[name]["time"].append(elapsed)
+                
+                print(f"  VQC {name}: Acc={acc:.2f}, Time={elapsed:.1f}s")
+                
+            except Exception as e:
+                print(f"  VQC {name}: ERROR - {e}")
+    
+    # Plot VQC accuracy
+    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+    colors = ['#FF6B6B', '#4ECDC4']
+    markers = ['o', 's']
+    
+    for idx, (name, _) in enumerate(encodings):
+        if results[name]["qubits"]:
+            axes[0].plot(results[name]["qubits"], results[name]["accuracy"],
+                f'{markers[idx]}-', color=colors[idx], label=f'VQC {name}', linewidth=2, markersize=8)
+            axes[1].plot(results[name]["qubits"], results[name]["time"],
+                f'{markers[idx]}-', color=colors[idx], label=f'VQC {name}', linewidth=2, markersize=8)
+    
+    axes[0].set_xlabel('Number of Qubits', fontsize=12)
+    axes[0].set_ylabel('Classification Accuracy', fontsize=12)
+    axes[0].set_title('VQC Accuracy vs Qubits', fontsize=14)
+    axes[0].legend()
+    axes[0].grid(True, alpha=0.3)
+    axes[0].set_ylim(0.3, 1.05)
+    
+    axes[1].set_xlabel('Number of Qubits', fontsize=12)
+    axes[1].set_ylabel('Training Time (s)', fontsize=12)
+    axes[1].set_title('VQC Training Time vs Qubits', fontsize=14)
+    axes[1].legend()
+    axes[1].grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    vqc_path = OUTPUT_DIR / "vqc_accuracy_vs_qubits.png"
+    plt.savefig(vqc_path, dpi=300, bbox_inches='tight', facecolor='white')
+    print(f"\nSaved VQC accuracy plot: {vqc_path}")
+    plt.close()
+    
+    return results
+
+
+def benchmark_vqc_tns_vs_statevector(
+    qubit_range: list = [4, 5, 6, 8],
+    n_samples: int = 8,
+    reps_ansatz: int = 2,
+):
+    """
+    Compare VQC execution time: TNS vs Statevector.
+    Includes TNS at low qubits for comparison.
+    """
+    from qiskit.circuit.library import TwoLocal
+    
+    print("\n" + "="*70)
+    print("VQC: TNS vs STATEVECTOR SCALING")
+    print("="*70)
+    
+    results = {
+        "qubits": [],
+        "statevector_time": [],
+        "tns_time": [],
+    }
+    
+    for n_qubits in qubit_range:
+        print(f"\n--- {n_qubits} qubits ---")
+        
+        np.random.seed(42)
+        X = np.random.uniform(0, np.pi, (n_samples, n_qubits))
+        
+        # Build VQC
+        feature_map, x_params = angle_encoding_circuit(n_qubits, AngleEncodingType.SIMPLE_RY)
+        ansatz = TwoLocal(
+            num_qubits=n_qubits,
+            rotation_blocks=["rx", "rz", "rx"],
+            entanglement_blocks="cx",
+            entanglement="linear",
+            reps=reps_ansatz,
+        )
+        
+        circuit = QuantumCircuit(n_qubits)
+        circuit.compose(feature_map, inplace=True)
+        circuit.compose(ansatz, inplace=True)
+        
+        theta_params = list(ansatz.parameters)
+        theta = np.random.uniform(-np.pi, np.pi, len(theta_params))
+        
+        results["qubits"].append(n_qubits)
+        
+        # Statevector timing
+        start = time.time()
+        for x in X:
+            param_dict = {x_params[i]: float(x[i]) for i in range(len(x_params))}
+            param_dict.update({theta_params[i]: float(theta[i]) for i in range(len(theta_params))})
+            bound = circuit.assign_parameters(param_dict)
+            from qiskit.quantum_info import Statevector
+            sv = Statevector.from_instruction(bound)
+        sv_time = time.time() - start
+        results["statevector_time"].append(sv_time)
+        print(f"  Statevector: {sv_time:.3f}s")
+        
+        # TNS timing
+        try:
+            from qiskit_aer import AerSimulator
+            tns_backend = AerSimulator(method='matrix_product_state')
+            
+            start = time.time()
+            for x in X:
+                param_dict = {x_params[i]: float(x[i]) for i in range(len(x_params))}
+                param_dict.update({theta_params[i]: float(theta[i]) for i in range(len(theta_params))})
+                bound = circuit.assign_parameters(param_dict)
+                bound.save_statevector()
+                result = tns_backend.run(bound).result()
+            tns_time = time.time() - start
+            results["tns_time"].append(tns_time)
+            print(f"  TNS (MPS):   {tns_time:.3f}s")
+        except Exception as e:
+            results["tns_time"].append(None)
+            print(f"  TNS: FAILED - {e}")
+    
+    # Plot
+    fig, ax = plt.subplots(figsize=(10, 6))
+    
+    ax.semilogy(results["qubits"], results["statevector_time"], 
+               'o-', label='VQC Statevector', linewidth=2, markersize=8, color='#3498DB')
+    
+    valid_tns = [(q, t) for q, t in zip(results["qubits"], results["tns_time"]) if t is not None]
+    if valid_tns:
+        ax.semilogy([x[0] for x in valid_tns], [x[1] for x in valid_tns],
+                   's-', label='VQC TNS (MPS)', linewidth=2, markersize=8, color='#E74C3C')
+    
+    ax.set_xlabel('Number of Qubits', fontsize=12)
+    ax.set_ylabel('Execution Time (s)', fontsize=12)
+    ax.set_title('VQC: TNS vs Statevector Scaling', fontsize=14)
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    vqc_scaling_path = OUTPUT_DIR / "vqc_tns_vs_statevector.png"
+    plt.savefig(vqc_scaling_path, dpi=300, bbox_inches='tight', facecolor='white')
+    print(f"\nSaved: {vqc_scaling_path}")
+    plt.close()
+    
+    return results
+
+
+def benchmark_combined_accuracy(
+    qubit_range: list = [4, 5, 6, 8],
+    n_train: int = 16,
+    n_test: int = 8,
+    seed: int = 42,
+):
+    """
+    Combined plot: QSVM vs VQC accuracy comparison.
+    """
+    from sklearn.svm import SVC
+    from sklearn.metrics import accuracy_score
+    from qiskit.circuit.library import TwoLocal
+    
+    np.random.seed(seed)
+    
+    print("\n" + "="*70)
+    print("COMBINED: QSVM vs VQC ACCURACY COMPARISON")
+    print("="*70)
+    
+    results = {
+        "qubits": [],
+        "qsvm_acc": [],
+        "vqc_acc": [],
+    }
+    
+    for n_qubits in qubit_range:
+        print(f"\n--- {n_qubits} qubits ---")
+        
+        # Generate data
+        X_train = np.random.uniform(0, np.pi, (n_train, n_qubits))
+        y_train = np.array([0] * (n_train // 2) + [1] * (n_train // 2))
+        X_train[y_train == 1] += 0.3 * np.random.randn(n_train // 2, n_qubits)
+        X_train = np.clip(X_train, 0, np.pi)
+        
+        X_test = np.random.uniform(0, np.pi, (n_test, n_qubits))
+        y_test = np.array([0] * (n_test // 2) + [1] * (n_test // 2))
+        X_test[y_test == 1] += 0.3 * np.random.randn(n_test // 2, n_qubits)
+        X_test = np.clip(X_test, 0, np.pi)
+        
+        results["qubits"].append(n_qubits)
+        
+        # QSVM
+        try:
+            feature_map, x_params = angle_encoding_circuit(n_qubits, AngleEncodingType.SIMPLE_RY)
+            K_train, _ = compute_kernel_matrix(X_train, feature_map, x_params, BackendType.STATEVECTOR)
+            
+            svc = SVC(kernel='precomputed')
+            svc.fit(K_train, y_train)
+            
+            K_test = np.zeros((n_test, n_train))
+            for i in range(n_test):
+                for j in range(n_train):
+                    bind_x = {x_params[k]: float(X_test[i, k]) for k in range(len(x_params))}
+                    bind_z = {x_params[k]: float(X_train[j, k]) for k in range(len(x_params))}
+                    qc = QuantumCircuit(n_qubits)
+                    qc.compose(feature_map.assign_parameters(bind_x), inplace=True)
+                    qc.compose(feature_map.assign_parameters(bind_z).inverse(), inplace=True)
+                    K_test[i, j] = compute_kernel_element_statevector(qc)
+            
+            qsvm_acc = accuracy_score(y_test, svc.predict(K_test))
+            results["qsvm_acc"].append(qsvm_acc)
+            print(f"  QSVM: {qsvm_acc:.2f}")
+        except Exception as e:
+            results["qsvm_acc"].append(None)
+            print(f"  QSVM: ERROR - {e}")
+        
+        # VQC (simplified)
+        try:
+            feature_map, x_params = angle_encoding_circuit(n_qubits, AngleEncodingType.SIMPLE_RY)
+            ansatz = TwoLocal(n_qubits, ["rx", "rz", "rx"], "cx", "linear", reps=2)
+            
+            circuit = QuantumCircuit(n_qubits)
+            circuit.compose(feature_map, inplace=True)
+            circuit.compose(ansatz, inplace=True)
+            
+            theta_params = list(ansatz.parameters)
+            theta = np.random.uniform(-np.pi, np.pi, len(theta_params))
+            
+            # Quick training
+            for _ in range(20):
+                for i in range(len(X_train)):
+                    p = vqc_forward_pass(circuit, theta, x_params, theta_params, X_train[i])
+                    grad = np.zeros(len(theta))
+                    for j in range(min(len(theta), 8)):  # Partial gradient
+                        theta_p = theta.copy()
+                        theta_p[j] += np.pi / 4
+                        p_plus = vqc_forward_pass(circuit, theta_p, x_params, theta_params, X_train[i])
+                        grad[j] = (p_plus - p) * (2 * y_train[i] - 1)
+                    theta += 0.1 * grad
+            
+            y_pred = [1 if vqc_forward_pass(circuit, theta, x_params, theta_params, x) >= 0.5 else 0 for x in X_test]
+            vqc_acc = accuracy_score(y_test, y_pred)
+            results["vqc_acc"].append(vqc_acc)
+            print(f"  VQC:  {vqc_acc:.2f}")
+        except Exception as e:
+            results["vqc_acc"].append(None)
+            print(f"  VQC: ERROR - {e}")
+    
+    # Plot combined
+    fig, ax = plt.subplots(figsize=(10, 6))
+    
+    valid_qsvm = [(q, a) for q, a in zip(results["qubits"], results["qsvm_acc"]) if a is not None]
+    valid_vqc = [(q, a) for q, a in zip(results["qubits"], results["vqc_acc"]) if a is not None]
+    
+    if valid_qsvm:
+        ax.plot([x[0] for x in valid_qsvm], [x[1] for x in valid_qsvm],
+               'o-', label='QSVM', linewidth=2, markersize=10, color='#3498DB')
+    if valid_vqc:
+        ax.plot([x[0] for x in valid_vqc], [x[1] for x in valid_vqc],
+               's-', label='VQC', linewidth=2, markersize=10, color='#E74C3C')
+    
+    ax.axhline(y=0.5, color='gray', linestyle='--', label='Random (50%)')
+    ax.set_xlabel('Number of Qubits', fontsize=12)
+    ax.set_ylabel('Classification Accuracy', fontsize=12)
+    ax.set_title('QSVM vs VQC: Accuracy Comparison', fontsize=14)
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+    ax.set_ylim(0.3, 1.05)
+    
+    plt.tight_layout()
+    combined_path = OUTPUT_DIR / "qsvm_vs_vqc_accuracy.png"
+    plt.savefig(combined_path, dpi=300, bbox_inches='tight', facecolor='white')
+    print(f"\nSaved: {combined_path}")
     plt.close()
     
     return results
@@ -797,15 +1191,46 @@ def run_full_validation():
     print("*** PRIMARY METRIC FOR VQC HYPOTHESIS ***")
     print("="*70)
     
-    # B1. Classification accuracy vs qubits (Figure 16)
+    # B1. QSVM Classification accuracy vs qubits (Figure 16)
     print("\n" + "#"*70)
-    print("# B1: Classification Accuracy vs Qubits (Figure 16)")
-    print("# PRIMARY: Tests VQC parameter/feature efficiency hypothesis")
+    print("# B1: QSVM Classification Accuracy vs Qubits (Figure 16)")
     print("#"*70)
-    accuracy_results = benchmark_classification_accuracy(
+    qsvm_accuracy_results = benchmark_classification_accuracy(
         qubit_range=[4, 5, 6, 8, 10],
         n_train=16,
         n_test=8,
+    )
+    
+    # B2. VQC Accuracy vs Qubits
+    print("\n" + "#"*70)
+    print("# B2: VQC Classification Accuracy vs Qubits")
+    print("#"*70)
+    vqc_accuracy_results = benchmark_vqc_accuracy(
+        qubit_range=[4, 5, 6, 8],
+        n_train=16,
+        n_test=8,
+        reps_ansatz=2,
+        epochs=30,
+    )
+    
+    # B3. Combined QSVM vs VQC comparison
+    print("\n" + "#"*70)
+    print("# B3: QSVM vs VQC Combined Accuracy Comparison")
+    print("#"*70)
+    combined_acc = benchmark_combined_accuracy(
+        qubit_range=[4, 5, 6, 8],
+        n_train=16,
+        n_test=8,
+    )
+    
+    # B4. VQC TNS vs Statevector Scaling
+    print("\n" + "#"*70)
+    print("# B4: VQC TNS vs Statevector Scaling")
+    print("#"*70)
+    vqc_tns_results = benchmark_vqc_tns_vs_statevector(
+        qubit_range=[4, 5, 6, 8],
+        n_samples=8,
+        reps_ansatz=2,
     )
     
     # ========================================================================
@@ -844,8 +1269,11 @@ def run_full_validation():
     print("\n  QSVM Analysis (Kernel):")
     print("    - kernel_comparison_*.png (Figure 6)")
     print("    - tns_vs_statevector_scaling.png (Figure 8)")
-    print("\n  VQC Analysis (PRIMARY):")
-    print("    - accuracy_vs_qubits_by_encoding.png (Figure 16) ← KEY METRIC")
+    print("    - qsvm_accuracy_vs_qubits.png (Figure 16)")
+    print("\n  VQC Analysis:")
+    print("    - vqc_accuracy_vs_qubits.png ← VQC Training Time + Accuracy")
+    print("    - vqc_tns_vs_statevector.png ← VQC TNS vs Statevector Scaling")
+    print("    - qsvm_vs_vqc_accuracy.png ← Combined QSVM vs VQC Comparison")
     print("\n  Infrastructure:")
     print("    - cpu_vs_gpu_comparison.png (Figure 12)")
     print("    - tns_large_scale_scaling.png")
@@ -855,8 +1283,11 @@ def run_full_validation():
         "kernel_validation": results_5q,
         "tns_scaling": scaling_results,
         "encoding_kernel_comparison": encoding_results,
-        # VQC (Primary)
-        "vqc_accuracy_vs_qubits": accuracy_results,
+        "qsvm_accuracy_vs_qubits": qsvm_accuracy_results,
+        # VQC
+        "vqc_accuracy_vs_qubits": vqc_accuracy_results,
+        "vqc_tns_vs_statevector": vqc_tns_results,
+        "qsvm_vs_vqc_combined": combined_acc,
         # Infrastructure
         "cpu_vs_gpu": cpu_gpu_results,
         "large_scale_tns": large_scale_results,
