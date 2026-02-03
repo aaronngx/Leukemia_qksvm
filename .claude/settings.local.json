@@ -8,7 +8,8 @@
       "Bash(cmd.exe /c \"cd /d D:\\\\Aaron\\\\UTD\\\\6. Fall 2025\\\\CS 4301 - Special Topics in CS\\\\Leukemia_qksvm && py311\\\\Scripts\\\\python.exe run_scad_full.py 2>&1\")",
       "Bash(cmd.exe /c \"D: && cd \"\"D:\\\\Aaron\\\\UTD\\\\6. Fall 2025\\\\CS 4301 - Special Topics in CS\\\\Leukemia_qksvm\"\" && py311\\\\Scripts\\\\python.exe run_scad_full.py\")",
       "Bash(cmd.exe /c \"timeout /t 10 >nul && type C:\\\\Users\\\\Aaron\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\D--Aaron-UTD-6--Fall-2025-CS-4301---Special-Topics-in-CS-Leukemia-qksvm\\\\tasks\\\\bfe4e9c.output\")",
-      "Bash(cmd.exe:*)"
+      "Bash(cmd.exe:*)",
+      "Bash(powershell.exe -Command:*)"
     ]
   }
 }
