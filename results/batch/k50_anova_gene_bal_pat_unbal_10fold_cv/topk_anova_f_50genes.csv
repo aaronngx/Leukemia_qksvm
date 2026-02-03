@@ -1,0 +1,51 @@
+overall_rank,rank_within_class,gene_accession,gene_description,f_score,favors_class
+1,1,X17042_at,PRG1 Proteoglycan 1; secretory granule,46.13573111848128,AML
+2,2,Y00787_s_at,INTERLEUKIN-8 PRECURSOR,41.58334475273399,AML
+3,3,M27891_at,CST3 Cystatin C (amyloid angiopathy and cerebral hemorrhage),39.11046313885508,AML
+4,4,M28130_rna1_s_at,Interleukin 8 (IL8) gene,36.43034950613659,AML
+5,5,M19045_f_at,LYZ Lysozyme,33.24403381727114,AML
+6,6,M11147_at,FTL Ferritin; light polypeptide,33.111958662271846,AML
+7,7,M96326_rna1_at,Azurocidin gene,33.00589740762877,AML
+8,8,M69043_at,MAJOR HISTOCOMPATIBILITY COMPLEX ENHANCER-BINDING PROTEIN MAD3,32.69223048802295,AML
+9,9,X14008_rna1_f_at,Lysozyme gene (EC 3.2.1.17),31.06191667296014,AML
+10,10,J03801_f_at,LYZ Lysozyme,30.507266298935868,AML
+11,11,L20941_at,FTH1 Ferritin heavy chain,28.769710247376846,AML
+12,1,U22376_cds2_s_at,C-myb gene extracted from Human (c-myb) gene; complete primary cds; and five complete alternatively spliced cds,26.703990180997284,ALL
+13,2,X59417_at,PROTEASOME IOTA CHAIN,20.908897098983587,ALL
+14,12,M19507_at,MPO Myeloperoxidase,20.771009947183828,AML
+15,13,L19779_at,Histone H2A.2 mRNA,19.957537838606445,AML
+16,14,Z48501_s_at,GB DEF = Polyadenylate binding protein II,19.24071593558815,AML
+17,3,M92287_at,CCND3 Cyclin D3,16.81578337436011,ALL
+18,4,U05259_rna1_at,MB-1 gene,15.56517489445512,ALL
+19,15,Y00433_at,GPX1 Glutathione peroxidase 1,14.940594217790085,AML
+20,16,M21119_s_at,LYZ Lysozyme,14.724108207263667,AML
+21,5,D63874_at,HMG1 High-mobility group (nonhistone chromosomal) protein 1,14.040639082680245,ALL
+22,17,J04990_at,CATHEPSIN G PRECURSOR,13.68541590866055,AML
+23,6,Z15115_at,TOP2B Topoisomerase (DNA) II beta (180kD),13.630289051231173,ALL
+24,7,M13792_at,ADA Adenosine deaminase,12.049803097092418,ALL
+25,8,L06797_s_at,PROBABLE G PROTEIN-COUPLED RECEPTOR LCR1 HOMOLOG,11.896947937343883,ALL
+26,9,M33680_at,26-kDa cell surface protein TAPA-1 mRNA,11.024213421832329,ALL
+27,18,M26311_s_at,GB DEF = Cystic fibrosis antigen mRNA,10.537351404971645,AML
+28,19,U01317_cds4_at,Delta-globin gene extracted from Human beta globin region on chromosome 11,9.732935776769507,AML
+29,20,M63438_s_at,GLUL Glutamate-ammonia ligase (glutamine synthase),9.516776411604635,AML
+30,10,M11722_at,Terminal transferase mRNA,9.167608328239721,ALL
+31,11,M23613_at,NPM1 Nucleophosmin (nucleolar phosphoprotein B23; numatrin),8.100910877958269,ALL
+32,12,M19311_s_at,CALM1 Calmodulin 1 (phosphorylase kinase; delta),7.066768289498794,ALL
+33,13,M17733_at,Thymosin beta-4 mRNA,6.973541844688392,ALL
+34,14,X82240_rna1_at,TCL1 gene (T cell leukemia) extracted from H.sapiens mRNA for Tcell leukemia/lymphoma 1,6.849066615869231,ALL
+35,15,S54005_s_at,THYMOSIN BETA-10,6.581817116581449,ALL
+36,21,X56681_s_at,JunD mRNA,6.260704419909942,AML
+37,16,L20688_at,GDP-dissociation inhibitor protein (Ly-GDI) mRNA,6.1981364689085705,ALL
+38,22,Z19554_s_at,VIM Vimentin,6.110398507511239,AML
+39,23,M91036_rna1_at,G-gamma globin gene extracted from H.sapiens G-gamma globin and A-gamma globin genes's,6.089564102194931,AML
+40,17,M14483_rna1_s_at,PTMA gene extracted from Human prothymosin alpha mRNA,5.9807074651576855,ALL
+41,18,X58529_at,IGHM Immunoglobulin mu,5.873390781783339,ALL
+42,19,M11353_at,EEF1G Translation elongation factor 1 gamma,5.82944660019956,ALL
+43,20,HG2887-HT3031_at,Sry-Related Hmg-Box 12 Protein (Gb:X73039),5.604395032725145,ALL
+44,24,V00594_s_at,Metallothionein isoform 2,5.425013842954098,AML
+45,25,AFFX-HUMGAPDH/M33197_5_at,AFFX-HUMGAPDH/M33197_5_at (endogenous control),3.954060465548218,AML
+46,21,M12886_at,TCRB T-cell receptor; beta cluster,3.5734042801939503,ALL
+47,22,X00437_s_at,TCRB T-cell receptor; beta cluster,3.155688593581007,ALL
+48,23,X76223_s_at,GB DEF = MAL gene exon 4,2.8851609147339046,ALL
+49,24,AFFX-HUMRGE/M10098_5_at,AFFX-HUMRGE/M10098_5_at (endogenous control),1.9926598451138549,ALL
+50,25,D86974_at,KIAA0220 gene; partial cds,1.8598773122316734,ALL

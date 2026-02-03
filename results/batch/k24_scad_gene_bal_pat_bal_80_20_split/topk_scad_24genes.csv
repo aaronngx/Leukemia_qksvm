@@ -1,0 +1,25 @@
+rank,gene_accession,gene_description,scad_weight
+1,X95735_at,Zyxin,0.016071565801751692
+2,D49950_at,Liver mRNA for interferon-gamma inducing factor(IGIF),0.015618177743217837
+3,U50136_rna1_at,Leukotriene C4 synthase (LTC4S) gene,0.015220290009268026
+4,M23197_at,CD33 CD33 antigen (differentiation antigen),0.014925494012660488
+5,Y12670_at,LEPR Leptin receptor,0.014608099071805119
+6,M16038_at,LYN V-yes-1 Yamaguchi sarcoma viral related oncogene homolog,0.013675088011748611
+7,X17042_at,PRG1 Proteoglycan 1; secretory granule,0.013177360069666808
+8,M55150_at,FAH Fumarylacetoacetate,0.01309469230642359
+9,M19507_at,MPO Myeloperoxidase,0.012741394120337611
+10,M84526_at,DF D component of complement (adipsin),0.012314509849214568
+11,M81933_at,CDC25A Cell division cycle 25A,0.01195087083297759
+12,M80254_at,PEPTIDYL-PROLYL CIS-TRANS ISOMERASE; MITOCHONDRIAL PRECURSOR,0.011825884404807453
+13,X85116_rna1_s_at,Epb72 gene exon 1,0.011742473689869706
+14,U82759_at,GB DEF = Homeodomain protein HoxA9 mRNA,0.011302340948133063
+15,L08246_at,INDUCED MYELOID LEUKEMIA CELL DIFFERENTIATION PROTEIN MCL1,0.011211029302435678
+16,M96326_rna1_at,Azurocidin gene,0.011077852875406455
+17,M27891_at,CST3 Cystatin C (amyloid angiopathy and cerebral hemorrhage),0.011032625472558262
+18,X04085_rna1_at,Catalase (EC 1.11.1.6) 5'flank and exon 1 mapping to chromosome 11; band p13 (and joined CDS),0.010884139364802524
+19,M22960_at,PPGB Protective protein for beta-galactosidase (galactosialidosis),0.010861003745596114
+20,M83652_s_at,PFC Properdin P factor; complement,0.010692356776775788
+21,U46751_at,Phosphotyrosine independent ligand p62 for the Lck SH2 domain mRNA,0.01063638605486671
+22,U12471_cds1_at,Thrombospondin-p50 gene extracted from Human thrombospondin-1 gene; partial cds,0.010581340536880578
+23,M62762_at,ATP6C Vacuolar H+ ATPase proton channel subunit,0.010557210880390603
+24,M63138_at,CTSD Cathepsin D (lysosomal aspartyl protease),0.010502526146740358

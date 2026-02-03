@@ -1,0 +1,4 @@
+method,Avg Time (s),Std Time,Min Time,Max Time,Runs
+ANOVA,0.24,0.1,0.12,0.64,140
+SCAD,95.3,1050.72,2.05,12429.96,140
+SNR,1.17,0.39,0.7,2.2,140

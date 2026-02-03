@@ -1,0 +1,4 @@
+method,time_seconds_No,time_seconds_Yes,k_No,k_Yes
+ANOVA,0.26,0.23,70,70
+SCAD,9.92,180.68,70,70
+SNR,1.19,1.15,70,70

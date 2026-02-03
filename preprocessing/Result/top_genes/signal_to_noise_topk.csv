@@ -1,0 +1,31 @@
+rank,gene_id,vote_count,avg_rank,score
+1,FAH Fumarylacetoacetate,5,3.2,1.490909136162132
+2,Zyxin,5,4.4,1.420214066651345
+3,Leukotriene C4 synthase (LTC4S) gene,5,5.2,1.443213992169062
+4,C-myb gene extracted from Human (c-myb) gene; complete primary cds; and five complete alternatively spliced cds,5,7.0,1.3500008731915665
+5,LYN V-yes-1 Yamaguchi sarcoma viral related oncogene homolog,5,13.6,1.1982948997828973
+6,CD33 CD33 antigen (differentiation antigen),4,9.0,1.2557829334806836
+7,PROTEASOME IOTA CHAIN,4,14.0,1.151885602864753
+8,LEPR Leptin receptor,3,7.666666666666667,"Gene Description
+LEPR Leptin receptor    0.083074
+LEPR Leptin receptor    1.281288
+dtype: float64"
+9,DF D component of complement (adipsin),3,8.333333333333334,1.252868946998807
+10,GB DEF = Homeodomain protein HoxA9 mRNA,3,8.666666666666666,1.2985048169777718
+11,Liver mRNA for interferon-gamma inducing factor(IGIF),3,11.0,1.2202117817660778
+12,MB-1 gene,3,12.333333333333334,1.1711076813655124
+13,Thrombospondin-p50 gene extracted from Human thrombospondin-1 gene; partial cds,3,14.333333333333334,1.1516839241646555
+14,CST3 Cystatin C (amyloid angiopathy and cerebral hemorrhage),3,15.333333333333334,1.1439866355385777
+15,Epb72 gene exon 1,3,18.333333333333332,1.0711904158957406
+16,PRG1 Proteoglycan 1; secretory granule,2,6.5,1.3550750405742096
+17,INTERLEUKIN-8 PRECURSOR,2,7.5,1.35823227592026
+18,ATP6C Vacuolar H+ ATPase proton channel subunit,2,10.0,1.3500784066210083
+19,Phosphotyrosine independent ligand p62 for the Lck SH2 domain mRNA,2,12.0,1.2701078688691054
+20,Interleukin 8 (IL8) gene,2,12.0,1.2380053082967497
+21,PEPTIDYL-PROLYL CIS-TRANS ISOMERASE; MITOCHONDRIAL PRECURSOR,2,12.5,1.1566100576557163
+22,CCND3 Cyclin D3,2,15.5,1.1459345383470716
+23,Thymopoietin beta mRNA,2,17.5,1.1095751749720222
+24,TCF3 Transcription factor 3 (E2A immunoglobulin enhancer binding factors E12/E47),2,20.0,"Gene Description
+TCF3 Transcription factor 3 (E2A immunoglobulin enhancer binding factors E12/E47)    1.099332
+TCF3 Transcription factor 3 (E2A immunoglobulin enhancer binding factors E12/E47)    1.081078
+dtype: float64"

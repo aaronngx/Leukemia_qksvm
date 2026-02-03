@@ -1,0 +1,17 @@
+overall_rank,rank_within_class,gene_description,gene_accession,snr_score,favors_class
+1,1,C-myb gene extracted from Human (c-myb) gene; complete primary cds; and five complete alternatively spliced cds,U22376_cds2_s_at,1.6805957031214482,ALL
+2,2,CCND3 Cyclin D3,M92287_at,1.6490013637636947,ALL
+3,3,PROTEASOME IOTA CHAIN,X59417_at,1.5629824056893695,ALL
+4,1,FAH Fumarylacetoacetate,M55150_at,-1.5257311544681642,AML
+5,2,Zyxin,X95735_at,-1.5226107646878766,AML
+6,3,GLUTATHIONE S-TRANSFERASE; MICROSOMAL,U46499_at,-1.454912012022064,AML
+7,4,Leukotriene C4 synthase (LTC4S) gene,U50136_rna1_at,-1.3945511851424388,AML
+8,4,Adenosine triphosphatase; calcium,Z69881_at,1.3295308343496737,ALL
+9,5,NUCLEOLYSIN TIA-1,M77142_at,1.2930256160738438,ALL
+10,6,Thymopoietin beta mRNA,U09087_s_at,1.267225107467654,ALL
+11,7,ACADM Acyl-Coenzyme A dehydrogenase; C-4 to C-12 straight chain,M91432_at,1.2559372048821762,ALL
+12,8,RETINOBLASTOMA BINDING PROTEIN P48,X74262_at,1.2533772704791502,ALL
+13,9,Clone 22 mRNA; alternative splice variant alpha-1,AF009426_at,1.2528490702517796,ALL
+14,10,MYL1 Myosin light chain (alkali),M31211_s_at,1.219710029579223,ALL
+15,11,Macmarcks,HG1612-HT1612_at,1.204652917842989,ALL
+16,12,SRP9 Signal recognition particle 9 kD protein,U20998_at,1.1986874102655936,ALL

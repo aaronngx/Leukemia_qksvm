@@ -1,0 +1,48 @@
+rank,gene_id,vote_count,avg_rank,score
+1,Transcriptional activator hSNF2b,6,18.666666666666668,"Gene Description
+Transcriptional activator hSNF2b    5.688920
+Transcriptional activator hSNF2b    5.040148
+dtype: float64"
+2,FAH Fumarylacetoacetate,5,2.2,7.36585820113614
+3,C-myb gene extracted from Human (c-myb) gene; complete primary cds; and five complete alternatively spliced cds,5,3.6,7.124350247084874
+4,PROTEASOME IOTA CHAIN,5,10.0,6.085904265253176
+5,CRYZ Crystallin zeta (quinone reductase),5,16.2,5.597850786665608
+6,Leukotriene C4 synthase (LTC4S) gene,5,17.6,5.896497029516346
+7,CCND3 Cyclin D3,5,18.0,5.610896474318208
+8,MB-1 gene,4,13.5,5.7558143784478215
+9,TCF3 Transcription factor 3 (E2A immunoglobulin enhancer binding factors E12/E47),4,15.5,"Gene Description
+TCF3 Transcription factor 3 (E2A immunoglobulin enhancer binding factors E12/E47)    4.766499
+TCF3 Transcription factor 3 (E2A immunoglobulin enhancer binding factors E12/E47)    5.388307
+dtype: float64"
+10,CDC25A Cell division cycle 25A,4,16.0,5.538297717747368
+11,Thrombospondin-p50 gene extracted from Human thrombospondin-1 gene; partial cds,4,16.0,5.748914739269589
+12,Thymopoietin beta mRNA,4,16.75,5.706255480439559
+13,RETINOBLASTOMA BINDING PROTEIN P48,4,22.0,5.532936859488385
+14,MYL1 Myosin light chain (alkali),3,7.0,6.146341328260983
+15,GB DEF = Homeodomain protein HoxA9 mRNA,3,10.333333333333334,6.296519362886187
+16,Inducible protein mRNA,3,22.0,5.28233885486044
+17,Liver mRNA for interferon-gamma inducing factor(IGIF),2,9.0,5.954640065568235
+18,PRG1 Proteoglycan 1; secretory granule,2,9.5,5.743443562054999
+19,Zyxin,2,12.0,5.83831407958864
+20,CD19 CD19 antigen,2,12.5,5.945697120336007
+21,LEPR Leptin receptor,2,14.5,"Gene Description
+LEPR Leptin receptor    0.310436
+LEPR Leptin receptor    5.503940
+dtype: float64"
+22,Cytoplasmic dynein light chain 1 (hdlc1) mRNA,2,19.5,5.318542782573895
+23,CTPS CTP synthetase,2,22.0,5.306968940906867
+24,DHPS Deoxyhypusine synthase,2,22.5,"Gene Description
+DHPS Deoxyhypusine synthase    1.706967
+DHPS Deoxyhypusine synthase    5.340092
+dtype: float64"
+25,Clone 22 mRNA; alternative splice variant alpha-1,2,22.5,5.20666397898089
+26,Macmarcks,2,24.5,5.371600787319081
+27,TOP2B Topoisomerase (DNA) II beta (180kD),2,25.5,5.086638067011146
+28,CYP2C18 Cytochrome P450; subfamily IIC (mephenytoin 4-hydroxylase); polypeptide 18,2,25.5,5.096201031196232
+29,Heat Shock Protein; 70 Kda (Gb:Y00371),1,1.0,6.893223233219836
+30,MAJOR HISTOCOMPATIBILITY COMPLEX ENHANCER-BINDING PROTEIN MAD3,1,1.0,9.088618522425433
+31,MCM3 Minichromosome maintenance deficient (S. cerevisiae) 3,1,4.0,"Gene Description
+MCM3 Minichromosome maintenance deficient (S. cerevisiae) 3    6.913481
+MCM3 Minichromosome maintenance deficient (S. cerevisiae) 3    5.049732
+dtype: float64"
+32,ATP6C Vacuolar H+ ATPase proton channel subunit,1,5.0,7.297310317128779

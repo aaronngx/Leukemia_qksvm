@@ -1,0 +1,5 @@
+overall_rank,rank_within_class,gene_description,gene_accession,snr_score,favors_class
+1,1,FAH Fumarylacetoacetate,M55150_at,-1.4676411648891123,AML
+2,2,Leukotriene C4 synthase (LTC4S) gene,U50136_rna1_at,-1.4217083082738604,AML
+3,1,C-myb gene extracted from Human (c-myb) gene; complete primary cds; and five complete alternatively spliced cds,U22376_cds2_s_at,1.3393078806073437,ALL
+4,2,PROTEASOME IOTA CHAIN,X59417_at,1.1246367803969082,ALL

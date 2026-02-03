@@ -1,0 +1,51 @@
+rank,gene_accession,gene_description,f_score,favors_class
+1,U50136_rna1_at,Leukotriene C4 synthase (LTC4S) gene,78.67324065998321,AML
+2,X95735_at,Zyxin,75.16297623912182,AML
+3,M55150_at,FAH Fumarylacetoacetate,69.26685111638425,AML
+4,M16038_at,LYN V-yes-1 Yamaguchi sarcoma viral related oncogene homolog,54.77489659402939,AML
+5,Y12670_at,LEPR Leptin receptor,54.66892158945346,AML
+6,M23197_at,CD33 CD33 antigen (differentiation antigen),52.665101757155426,AML
+7,D49950_at,Liver mRNA for interferon-gamma inducing factor(IGIF),48.56058891802896,AML
+8,X17042_at,PRG1 Proteoglycan 1; secretory granule,46.13573111848128,AML
+9,U82759_at,GB DEF = Homeodomain protein HoxA9 mRNA,45.465061199508376,AML
+10,M84526_at,DF D component of complement (adipsin),44.49557589660357,AML
+11,L08246_at,INDUCED MYELOID LEUKEMIA CELL DIFFERENTIATION PROTEIN MCL1,41.6190878710725,AML
+12,Y00787_s_at,INTERLEUKIN-8 PRECURSOR,41.58334475273399,AML
+13,M80254_at,PEPTIDYL-PROLYL CIS-TRANS ISOMERASE; MITOCHONDRIAL PRECURSOR,41.14774422983326,AML
+14,U46751_at,Phosphotyrosine independent ligand p62 for the Lck SH2 domain mRNA,40.814668476110015,AML
+15,M27891_at,CST3 Cystatin C (amyloid angiopathy and cerebral hemorrhage),39.11046313885508,AML
+16,M62762_at,ATP6C Vacuolar H+ ATPase proton channel subunit,38.54474448860884,AML
+17,M63138_at,CTSD Cathepsin D (lysosomal aspartyl protease),36.71951744790182,AML
+18,M28130_rna1_s_at,Interleukin 8 (IL8) gene,36.43034950613659,AML
+19,M81695_s_at,ITGAX Integrin; alpha X (antigen CD11C (p150); alpha polypeptide),35.36295043252816,AML
+20,X85116_rna1_s_at,Epb72 gene exon 1,34.16392525707794,AML
+21,M57710_at,LGALS3 Lectin; galactoside-binding; soluble; 3 (galectin 3) (NOTE: redefinition of symbol),33.71842130679627,AML
+22,U12471_cds1_at,Thrombospondin-p50 gene extracted from Human thrombospondin-1 gene; partial cds,33.57349871953837,AML
+23,M19045_f_at,LYZ Lysozyme,33.24403381727114,AML
+24,M11147_at,FTL Ferritin; light polypeptide,33.111958662271846,AML
+25,M96326_rna1_at,Azurocidin gene,33.00589740762877,AML
+26,M69043_at,MAJOR HISTOCOMPATIBILITY COMPLEX ENHANCER-BINDING PROTEIN MAD3,32.69223048802295,AML
+27,M83652_s_at,PFC Properdin P factor; complement,31.832791054481923,AML
+28,U67963_at,Lysophospholipase homolog (HU-K5) mRNA,31.10598777609567,AML
+29,X14008_rna1_f_at,Lysozyme gene (EC 3.2.1.17),31.06191667296014,AML
+30,M22960_at,PPGB Protective protein for beta-galactosidase (galactosialidosis),30.86742802733736,AML
+31,J03801_f_at,LYZ Lysozyme,30.507266298935868,AML
+32,X58431_rna2_s_at,HOX 2.2 gene extracted from Human Hox2.2 gene for a homeobox protein,30.035700979051235,AML
+33,X04085_rna1_at,Catalase (EC 1.11.1.6) 5'flank and exon 1 mapping to chromosome 11; band p13 (and joined CDS),29.774742821721397,AML
+34,L20941_at,FTH1 Ferritin heavy chain,28.769710247376846,AML
+35,M98399_s_at,CD36 CD36 antigen (collagen type I receptor; thrombospondin receptor),28.479608830172737,AML
+36,D14874_at,ADM Adrenomedullin,27.87259917778346,AML
+37,M81933_at,CDC25A Cell division cycle 25A,27.81553564904463,AML
+38,L09209_s_at,APLP2 Amyloid beta (A4) precursor-like protein 2,27.185185694479276,AML
+39,M32304_s_at,TIMP2 Tissue inhibitor of metalloproteinase 2,27.09234920787941,AML
+40,U22376_cds2_s_at,C-myb gene extracted from Human (c-myb) gene; complete primary cds; and five complete alternatively spliced cds,26.703990180997284,ALL
+41,M83667_rna1_s_at,NF-IL6-beta protein mRNA,26.48781603082287,AML
+42,X16546_at,RNS2 Ribonuclease 2 (eosinophil-derived neurotoxin; EDN),25.526120830825548,AML
+43,X62654_rna1_at,ME491  gene extracted from H.sapiens gene for Me491/CD63 antigen,25.35453147608904,AML
+44,HG3494-HT3688_at,Nuclear Factor Nf-Il6,25.274856733602046,AML
+45,M75715_s_at,EUKARYOTIC PEPTIDE CHAIN RELEASE FACTOR SUBUNIT 1,25.221543333876234,AML
+46,M83221_at,TRANSCRIPTION FACTOR RELB,25.208532085773594,AML
+47,D10495_at,PRKCD Protein kinase C; delta,25.053918402954828,AML
+48,U41767_s_at,Metargidin precursor mRNA,24.934112814078507,AML
+49,Z32765_at,GB DEF = CD36 gene exon 15,24.926609221306457,AML
+50,X52056_at,SPI1 Spleen focus forming virus (SFFV) proviral integration oncogene spi1,24.91045358197318,AML

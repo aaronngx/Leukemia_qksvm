@@ -1,0 +1,5 @@
+rank,gene_accession,gene_description,f_score,favors_class
+1,U50136_rna1_at,Leukotriene C4 synthase (LTC4S) gene,78.67324065998321,AML
+2,X95735_at,Zyxin,75.16297623912182,AML
+3,M55150_at,FAH Fumarylacetoacetate,69.26685111638425,AML
+4,M16038_at,LYN V-yes-1 Yamaguchi sarcoma viral related oncogene homolog,54.77489659402939,AML

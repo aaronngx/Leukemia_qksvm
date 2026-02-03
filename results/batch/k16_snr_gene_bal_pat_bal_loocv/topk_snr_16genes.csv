@@ -1,0 +1,17 @@
+overall_rank,rank_within_class,gene_description,gene_accession,snr_score,favors_class
+1,1,C-myb gene extracted from Human (c-myb) gene; complete primary cds; and five complete alternatively spliced cds,U22376_cds2_s_at,1.6805957031214482,ALL
+2,2,CCND3 Cyclin D3,M92287_at,1.6490013637636947,ALL
+3,3,PROTEASOME IOTA CHAIN,X59417_at,1.5629824056893695,ALL
+4,1,FAH Fumarylacetoacetate,M55150_at,-1.5257311544681642,AML
+5,2,Zyxin,X95735_at,-1.5226107646878766,AML
+6,3,GLUTATHIONE S-TRANSFERASE; MICROSOMAL,U46499_at,-1.454912012022064,AML
+7,4,Leukotriene C4 synthase (LTC4S) gene,U50136_rna1_at,-1.3945511851424388,AML
+8,4,Adenosine triphosphatase; calcium,Z69881_at,1.3295308343496737,ALL
+9,5,NUCLEOLYSIN TIA-1,M77142_at,1.2930256160738438,ALL
+10,6,Thymopoietin beta mRNA,U09087_s_at,1.267225107467654,ALL
+11,7,ACADM Acyl-Coenzyme A dehydrogenase; C-4 to C-12 straight chain,M91432_at,1.2559372048821762,ALL
+12,8,RETINOBLASTOMA BINDING PROTEIN P48,X74262_at,1.2533772704791502,ALL
+13,5,LYN V-yes-1 Yamaguchi sarcoma viral related oncogene homolog,M16038_at,-1.1937263561276519,AML
+14,6,Epb72 gene exon 1,X85116_rna1_s_at,-1.1844689844737903,AML
+15,7,DF D component of complement (adipsin),M84526_at,-1.1735645902263556,AML
+16,8,Small GTP-binding protein mRNA,U57094_at,-1.1661077426190736,AML

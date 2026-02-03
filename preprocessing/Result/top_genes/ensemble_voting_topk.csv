@@ -1,0 +1,42 @@
+rank,gene_id,vote_count,avg_rank,score
+1,FAH Fumarylacetoacetate,5,2.0,4.45
+2,Leukotriene C4 synthase (LTC4S) gene,5,4.2,10.1
+3,Zyxin,5,4.8,11.5
+4,C-myb gene extracted from Human (c-myb) gene; complete primary cds; and five complete alternatively spliced cds,5,11.2,27.4
+5,GB DEF = Homeodomain protein HoxA9 mRNA,5,12.4,30.35
+6,LEPR Leptin receptor,5,12.8,"Gene Description
+LEPR Leptin receptor    5599.7
+LEPR Leptin receptor      29.1
+dtype: float64"
+7,CDC25A Cell division cycle 25A,5,14.4,34.15
+8,LYN V-yes-1 Yamaguchi sarcoma viral related oncogene homolog,5,19.8,46.0
+9,CD33 CD33 antigen (differentiation antigen),4,12.0,33.1875
+10,Liver mRNA for interferon-gamma inducing factor(IGIF),3,8.666666666666666,21.583333333333332
+11,Thrombospondin-p50 gene extracted from Human thrombospondin-1 gene; partial cds,3,12.0,30.625
+12,PROTEASOME IOTA CHAIN,3,14.333333333333334,38.583333333333336
+13,MYL1 Myosin light chain (alkali),3,15.666666666666666,39.166666666666664
+14,Epb72 gene exon 1,3,16.666666666666668,45.5
+15,Neuromedin B mRNA,3,22.0,52.583333333333336
+16,ATP6C Vacuolar H+ ATPase proton channel subunit,2,8.0,18.375
+17,PRG1 Proteoglycan 1; secretory granule,2,9.5,26.375
+18,INTERLEUKIN-8 PRECURSOR,2,12.0,28.75
+19,TCF3 Transcription factor 3 (E2A immunoglobulin enhancer binding factors E12/E47),2,12.5,"Gene Description
+TCF3 Transcription factor 3 (E2A immunoglobulin enhancer binding factors E12/E47)    172.0
+TCF3 Transcription factor 3 (E2A immunoglobulin enhancer binding factors E12/E47)     58.0
+dtype: float64"
+20,PEPTIDYL-PROLYL CIS-TRANS ISOMERASE; MITOCHONDRIAL PRECURSOR,2,13.0,36.25
+21,CCND3 Cyclin D3,2,14.5,34.875
+22,FTL Ferritin; light polypeptide,2,18.0,39.0
+23,ACTN2 Actinin alpha 2 ,2,18.5,46.875
+24,Thymopoietin beta mRNA,2,19.0,44.875
+25,Phosphotyrosine independent ligand p62 for the Lck SH2 domain mRNA,2,19.0,39.0
+26,RETINOBLASTOMA BINDING PROTEIN P48,2,20.5,50.625
+27,CRYZ Crystallin zeta (quinone reductase),2,22.0,54.625
+28,Oncoprotein 18 (Op18) gene,2,22.0,56.125
+29,Interleukin 8 (IL8) gene,2,22.0,48.375
+30,Transcriptional activator hSNF2b,2,22.5,"Gene Description
+Transcriptional activator hSNF2b     55.625
+Transcriptional activator hSNF2b    126.500
+dtype: float64"
+31,DF D component of complement (adipsin),2,25.5,57.625
+32,HOX 2.2 gene extracted from Human Hox2.2 gene for a homeobox protein,2,26.5,59.375

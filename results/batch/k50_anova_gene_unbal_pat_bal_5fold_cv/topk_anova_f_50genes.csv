@@ -1,0 +1,51 @@
+rank,gene_accession,gene_description,f_score,favors_class
+1,M55150_at,FAH Fumarylacetoacetate,49.386945196095546,AML
+2,M92287_at,CCND3 Cyclin D3,47.2787064206462,ALL
+3,U22376_cds2_s_at,C-myb gene extracted from Human (c-myb) gene; complete primary cds; and five complete alternatively spliced cds,47.14079136964782,ALL
+4,X59417_at,PROTEASOME IOTA CHAIN,41.9744450257852,ALL
+5,X95735_at,Zyxin,35.905294806218095,AML
+6,U50136_rna1_at,Leukotriene C4 synthase (LTC4S) gene,34.81164381741411,AML
+7,AF009426_at,Clone 22 mRNA; alternative splice variant alpha-1,33.04596695223544,ALL
+8,U57094_at,Small GTP-binding protein mRNA,29.598235093061547,AML
+9,HG1612-HT1612_at,Macmarcks,29.163396957955822,ALL
+10,U59877_s_at,Low-Mr GTP-binding protein (RAB31) mRNA,28.888575293526326,AML
+11,M31211_s_at,MYL1 Myosin light chain (alkali),28.288137273862645,ALL
+12,M31303_rna1_at,Oncoprotein 18 (Op18) gene,28.191486367930576,ALL
+13,Z69881_at,Adenosine triphosphatase; calcium,28.092052521986624,ALL
+14,D87078_at,KIAA0235 gene; partial cds,27.981995698558382,ALL
+15,S50223_at,HKR-T1,27.16546839870854,ALL
+16,M31523_at,TCF3 Transcription factor 3 (E2A immunoglobulin enhancer binding factors E12/E47),26.746523434077844,ALL
+17,U09087_s_at,Thymopoietin beta mRNA,26.30348066540842,ALL
+18,M14483_rna1_s_at,PTMA gene extracted from Human prothymosin alpha mRNA,25.88140890843037,ALL
+19,M77142_at,NUCLEOLYSIN TIA-1,25.830555968327428,ALL
+20,U20998_at,SRP9 Signal recognition particle 9 kD protein,25.639697528945014,ALL
+21,U46499_at,GLUTATHIONE S-TRANSFERASE; MICROSOMAL,25.62952627248921,AML
+22,Y12670_at,LEPR Leptin receptor,25.05993477302086,AML
+23,Y00433_at,GPX1 Glutathione peroxidase 1,25.045333561150926,AML
+24,L13278_at,CRYZ Crystallin zeta (quinone reductase),24.958165548729728,ALL
+25,D63880_at,KIAA0159 gene,24.888386360366688,ALL
+26,L42572_at,Motor protein,24.843307943416757,ALL
+27,X15414_at,ALDR1 Aldehyde reductase 1 (low Km aldose reductase),24.514066702011004,ALL
+28,D49950_at,Liver mRNA for interferon-gamma inducing factor(IGIF),24.51129234537625,AML
+29,U90546_at,Butyrophilin (BTF4) mRNA,24.420661210087346,ALL
+30,U72342_at,PLATELET-ACTIVATING FACTOR ACETYLHYDROLASE 45 KD SUBUNIT,24.327956909571835,ALL
+31,X92106_at,Bleomycin hydrolase,24.298919490427462,ALL
+32,M91432_at,ACADM Acyl-Coenzyme A dehydrogenase; C-4 to C-12 straight chain,24.264896264059725,ALL
+33,X67337_at,HPBRII-4 mRNA,24.201219512195124,ALL
+34,U25435_at,Transcriptional repressor (CTCF) mRNA,24.192353289863664,ALL
+35,X74262_at,RETINOBLASTOMA BINDING PROTEIN P48,23.809321196970426,ALL
+36,U26266_s_at,DHPS Deoxyhypusine synthase,23.757191565382445,ALL
+37,X56411_rna1_at,ADH4 gene for class II alcohol dehydrogenase (pi subunit); exon 1,23.746018500017627,ALL
+38,M16038_at,LYN V-yes-1 Yamaguchi sarcoma viral related oncogene homolog,23.65646060982297,AML
+39,M65214_s_at,TCF3 Transcription factor 3 (E2A immunoglobulin enhancer binding factors E12/E47),23.429064891848775,ALL
+40,M80254_at,PEPTIDYL-PROLYL CIS-TRANS ISOMERASE; MITOCHONDRIAL PRECURSOR,23.363494897959185,AML
+41,M11147_at,FTL Ferritin; light polypeptide,23.06885712612597,AML
+42,X99585_at,SMT3B protein,23.003823272742757,ALL
+43,L49229_f_at,GB DEF = Retinoblastoma susceptibility protein (RB1) gene; with a 3 bp deletion in exon 22 (L11910 bases 161855-162161),22.76449281062976,ALL
+44,X52851_rna1_at,Peptidylprolyl isomerase gene extracted from Human cyclophilin gene for cyclophilin (EC 5.2.1.8),22.73804871496976,ALL
+45,U82759_at,GB DEF = Homeodomain protein HoxA9 mRNA,22.70336422474899,AML
+46,L25931_s_at,LBR Lamin B receptor,22.653720067561363,ALL
+47,M19311_s_at,CALM1 Calmodulin 1 (phosphorylase kinase; delta),22.610012863374035,ALL
+48,U81556_at,Hypothetical protein A4 mRNA,22.586388918693636,ALL
+49,U49395_at,Ionotropic ATP receptor P2X5a mRNA,22.428958211357163,ALL
+50,X17042_at,PRG1 Proteoglycan 1; secretory granule,22.120081709810794,AML

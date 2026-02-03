@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(py311/Scripts/python.exe:*)",
+      "Bash(py311Scriptspython.exe:*)",
+      "Bash(cmd.exe /c \"cd /d D:\\\\Aaron\\\\UTD\\\\6. Fall 2025\\\\CS 4301 - Special Topics in CS\\\\Leukemia_qksvm && py311\\\\Scripts\\\\python.exe -c \"\"import sys; sys.path.insert\\(0, ''.''\\); from preprocessing.Preprocessing import FeatureSelectionExperiment, load_golub_data; X, y = load_golub_data\\(\\); print\\(f''Loaded: X shape = {X.shape}''\\); exp = FeatureSelectionExperiment\\(X, y, output_dir=''preprocessing/Result_scad_full'', k_values=[4, 8, 16, 24, 32, 50]\\); results = exp.run_experiment\\(methods=[''scad_regularization'']\\); print\\(f''Results: {results.shape}''\\)\"\"\")",
+      "Bash(cmd.exe /c \"cd /d D:\\\\Aaron\\\\UTD\\\\6. Fall 2025\\\\CS 4301 - Special Topics in CS\\\\Leukemia_qksvm && py311\\\\Scripts\\\\python.exe run_scad_full.py\")",
+      "Bash(cmd.exe /c \"cd /d D:\\\\Aaron\\\\UTD\\\\6. Fall 2025\\\\CS 4301 - Special Topics in CS\\\\Leukemia_qksvm && py311\\\\Scripts\\\\python.exe run_scad_full.py 2>&1\")",
+      "Bash(cmd.exe /c \"D: && cd \"\"D:\\\\Aaron\\\\UTD\\\\6. Fall 2025\\\\CS 4301 - Special Topics in CS\\\\Leukemia_qksvm\"\" && py311\\\\Scripts\\\\python.exe run_scad_full.py\")",
+      "Bash(cmd.exe /c \"timeout /t 10 >nul && type C:\\\\Users\\\\Aaron\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\D--Aaron-UTD-6--Fall-2025-CS-4301---Special-Topics-in-CS-Leukemia-qksvm\\\\tasks\\\\bfe4e9c.output\")",
+      "Bash(cmd.exe:*)"
+    ]
+  }
+}

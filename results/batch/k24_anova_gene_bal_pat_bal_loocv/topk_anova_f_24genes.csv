@@ -1,0 +1,25 @@
+overall_rank,rank_within_class,gene_accession,gene_description,f_score,favors_class
+1,1,M14483_rna1_s_at,PTMA gene extracted from Human prothymosin alpha mRNA,25.88140890843037,ALL
+2,1,Y00433_at,GPX1 Glutathione peroxidase 1,25.045333561150926,AML
+3,2,M11147_at,FTL Ferritin; light polypeptide,23.06885712612597,AML
+4,2,X52851_rna1_at,Peptidylprolyl isomerase gene extracted from Human cyclophilin gene for cyclophilin (EC 5.2.1.8),22.73804871496976,ALL
+5,3,X17042_at,PRG1 Proteoglycan 1; secretory granule,22.120081709810794,AML
+6,4,M69043_at,MAJOR HISTOCOMPATIBILITY COMPLEX ENHANCER-BINDING PROTEIN MAD3,21.8863419550141,AML
+7,5,Y00787_s_at,INTERLEUKIN-8 PRECURSOR,19.01909020141497,AML
+8,3,M13792_at,ADA Adenosine deaminase,18.98130217364798,ALL
+9,6,M28130_rna1_s_at,Interleukin 8 (IL8) gene,15.82952601422224,AML
+10,7,M27891_at,CST3 Cystatin C (amyloid angiopathy and cerebral hemorrhage),14.930827070789926,AML
+11,8,L20941_at,FTH1 Ferritin heavy chain,14.28479081991648,AML
+12,9,L19779_at,Histone H2A.2 mRNA,13.521843093060921,AML
+13,10,M96326_rna1_at,Azurocidin gene,11.984509022009998,AML
+14,11,X14008_rna1_f_at,Lysozyme gene (EC 3.2.1.17),11.60587345509339,AML
+15,4,X03934_at,GB DEF = T-cell antigen receptor gene T3-delta,11.326945525748782,ALL
+16,5,U23852_s_at,GB DEF = T-lymphocyte specific protein tyrosine kinase p56lck (lck) abberant mRNA,10.42914495181326,ALL
+17,6,X76223_s_at,GB DEF = MAL gene exon 4,9.293437439308562,ALL
+18,7,M17733_at,Thymosin beta-4 mRNA,9.039395611101916,ALL
+19,8,L20688_at,GDP-dissociation inhibitor protein (Ly-GDI) mRNA,7.3569605563891285,ALL
+20,9,X00437_s_at,TCRB T-cell receptor; beta cluster,6.773289467079607,ALL
+21,10,M12886_at,TCRB T-cell receptor; beta cluster,6.628978710818854,ALL
+22,12,M13560_s_at,PROBABLE PROTEIN DISULFIDE ISOMERASE ER-60 PRECURSOR,6.0612438418373005,AML
+23,11,V00599_s_at,mRNA fragment encoding beta-tubulin. (from clone D-beta-1),5.360896872592281,ALL
+24,12,AFFX-HUMRGE/M10098_3_at,AFFX-HUMRGE/M10098_3_at (endogenous control),3.745849827026884,ALL

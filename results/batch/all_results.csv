@@ -1,0 +1,421 @@
+k,method,gene_balance,patient_balance,validation,status,time_seconds,genes_selected,error,validation_name,note
+2,ANOVA,Yes,Yes,split,success,0.15,2,,70/30 Split,
+2,ANOVA,Yes,Yes,split,success,0.14,2,,80/20 Split,
+2,ANOVA,Yes,Yes,cv,success,0.15,2,,5-Fold CV,
+2,ANOVA,Yes,Yes,cv,success,0.17,2,,10-Fold CV,
+2,ANOVA,Yes,Yes,loocv,success,0.19,2,,LOOCV,
+2,ANOVA,Yes,No,split,success,0.12,2,,70/30 Split,
+2,ANOVA,Yes,No,split,success,0.13,2,,80/20 Split,
+2,ANOVA,Yes,No,cv,success,0.17,2,,5-Fold CV,
+2,ANOVA,Yes,No,cv,success,0.15,2,,10-Fold CV,
+2,ANOVA,Yes,No,loocv,success,0.23,2,,LOOCV,
+2,ANOVA,No,Yes,split,success,0.16,2,,70/30 Split,
+2,ANOVA,No,Yes,split,success,0.13,2,,80/20 Split,
+2,ANOVA,No,Yes,cv,success,0.15,2,,5-Fold CV,
+2,ANOVA,No,Yes,cv,success,0.16,2,,10-Fold CV,
+2,ANOVA,No,Yes,loocv,success,0.19,2,,LOOCV,
+2,ANOVA,No,No,split,success,0.14,2,,70/30 Split,
+2,ANOVA,No,No,split,success,0.16,2,,80/20 Split,
+2,ANOVA,No,No,cv,success,0.14,2,,5-Fold CV,
+2,ANOVA,No,No,cv,success,0.17,2,,10-Fold CV,
+2,ANOVA,No,No,loocv,success,0.23,2,,LOOCV,
+2,SNR,Yes,Yes,split,success,0.74,2,,70/30 Split,
+2,SNR,Yes,Yes,split,success,0.71,2,,80/20 Split,
+2,SNR,Yes,Yes,cv,success,0.73,2,,5-Fold CV,
+2,SNR,Yes,Yes,cv,success,0.75,2,,10-Fold CV,
+2,SNR,Yes,Yes,loocv,success,0.76,2,,LOOCV,
+2,SNR,Yes,No,split,success,0.71,2,,70/30 Split,
+2,SNR,Yes,No,split,success,0.7,2,,80/20 Split,
+2,SNR,Yes,No,cv,success,0.71,2,,5-Fold CV,
+2,SNR,Yes,No,cv,success,0.83,2,,10-Fold CV,
+2,SNR,Yes,No,loocv,success,0.8,2,,LOOCV,
+2,SNR,No,Yes,split,success,0.72,2,,70/30 Split,
+2,SNR,No,Yes,split,success,0.7,2,,80/20 Split,
+2,SNR,No,Yes,cv,success,0.73,2,,5-Fold CV,
+2,SNR,No,Yes,cv,success,0.73,2,,10-Fold CV,
+2,SNR,No,Yes,loocv,success,0.76,2,,LOOCV,
+2,SNR,No,No,split,success,0.71,2,,70/30 Split,
+2,SNR,No,No,split,success,0.72,2,,80/20 Split,
+2,SNR,No,No,cv,success,0.7,2,,5-Fold CV,
+2,SNR,No,No,cv,success,0.73,2,,10-Fold CV,
+2,SNR,No,No,loocv,success,0.81,2,,LOOCV,
+2,SCAD,Yes,Yes,split,success,2.05,2,,70/30 Split,SCAD uses regularization-based selection (balance N/A)
+2,SCAD,Yes,Yes,split,success,2.21,2,,80/20 Split,SCAD uses regularization-based selection (balance N/A)
+2,SCAD,Yes,Yes,cv,success,2.4,2,,5-Fold CV,SCAD uses regularization-based selection (balance N/A)
+2,SCAD,Yes,Yes,cv,success,2.59,2,,10-Fold CV,SCAD uses regularization-based selection (balance N/A)
+2,SCAD,Yes,Yes,loocv,success,2.45,2,,LOOCV,SCAD uses regularization-based selection (balance N/A)
+2,SCAD,Yes,No,split,success,3.63,2,,70/30 Split,SCAD uses regularization-based selection (balance N/A)
+2,SCAD,Yes,No,split,success,4.39,2,,80/20 Split,SCAD uses regularization-based selection (balance N/A)
+2,SCAD,Yes,No,cv,success,4.67,2,,5-Fold CV,SCAD uses regularization-based selection (balance N/A)
+2,SCAD,Yes,No,cv,success,4.37,2,,10-Fold CV,SCAD uses regularization-based selection (balance N/A)
+2,SCAD,Yes,No,loocv,success,4.1,2,,LOOCV,SCAD uses regularization-based selection (balance N/A)
+2,SCAD,No,Yes,split,success,4.56,2,,70/30 Split,SCAD uses regularization-based selection (balance N/A)
+2,SCAD,No,Yes,split,success,4.56,2,,80/20 Split,SCAD uses regularization-based selection (balance N/A)
+2,SCAD,No,Yes,cv,success,472.54,2,,5-Fold CV,SCAD uses regularization-based selection (balance N/A)
+2,SCAD,No,Yes,cv,success,8.81,2,,10-Fold CV,SCAD uses regularization-based selection (balance N/A)
+2,SCAD,No,Yes,loocv,success,6.3,2,,LOOCV,SCAD uses regularization-based selection (balance N/A)
+2,SCAD,No,No,split,success,5.57,2,,70/30 Split,SCAD uses regularization-based selection (balance N/A)
+2,SCAD,No,No,split,success,6.25,2,,80/20 Split,SCAD uses regularization-based selection (balance N/A)
+2,SCAD,No,No,cv,success,6.02,2,,5-Fold CV,SCAD uses regularization-based selection (balance N/A)
+2,SCAD,No,No,cv,success,5.11,2,,10-Fold CV,SCAD uses regularization-based selection (balance N/A)
+2,SCAD,No,No,loocv,success,4.67,2,,LOOCV,SCAD uses regularization-based selection (balance N/A)
+4,ANOVA,Yes,Yes,split,success,0.24,4,,70/30 Split,
+4,ANOVA,Yes,Yes,split,success,0.23,4,,80/20 Split,
+4,ANOVA,Yes,Yes,cv,success,0.29,4,,5-Fold CV,
+4,ANOVA,Yes,Yes,cv,success,0.31,4,,10-Fold CV,
+4,ANOVA,Yes,Yes,loocv,success,0.38,4,,LOOCV,
+4,ANOVA,Yes,No,split,success,0.27,4,,70/30 Split,
+4,ANOVA,Yes,No,split,success,0.27,4,,80/20 Split,
+4,ANOVA,Yes,No,cv,success,0.32,4,,5-Fold CV,
+4,ANOVA,Yes,No,cv,success,0.33,4,,10-Fold CV,
+4,ANOVA,Yes,No,loocv,success,0.44,4,,LOOCV,
+4,ANOVA,No,Yes,split,success,0.26,4,,70/30 Split,
+4,ANOVA,No,Yes,split,success,0.54,4,,80/20 Split,
+4,ANOVA,No,Yes,cv,success,0.45,4,,5-Fold CV,
+4,ANOVA,No,Yes,cv,success,0.4,4,,10-Fold CV,
+4,ANOVA,No,Yes,loocv,success,0.46,4,,LOOCV,
+4,ANOVA,No,No,split,success,0.3,4,,70/30 Split,
+4,ANOVA,No,No,split,success,0.33,4,,80/20 Split,
+4,ANOVA,No,No,cv,success,0.36,4,,5-Fold CV,
+4,ANOVA,No,No,cv,success,0.36,4,,10-Fold CV,
+4,ANOVA,No,No,loocv,success,0.49,4,,LOOCV,
+4,SNR,Yes,Yes,split,success,1.66,4,,70/30 Split,
+4,SNR,Yes,Yes,split,success,1.49,4,,80/20 Split,
+4,SNR,Yes,Yes,cv,success,1.88,4,,5-Fold CV,
+4,SNR,Yes,Yes,cv,success,1.51,4,,10-Fold CV,
+4,SNR,Yes,Yes,loocv,success,1.57,4,,LOOCV,
+4,SNR,Yes,No,split,success,1.63,4,,70/30 Split,
+4,SNR,Yes,No,split,success,1.92,4,,80/20 Split,
+4,SNR,Yes,No,cv,success,1.47,4,,5-Fold CV,
+4,SNR,Yes,No,cv,success,1.62,4,,10-Fold CV,
+4,SNR,Yes,No,loocv,success,1.86,4,,LOOCV,
+4,SNR,No,Yes,split,success,1.66,4,,70/30 Split,
+4,SNR,No,Yes,split,success,1.85,4,,80/20 Split,
+4,SNR,No,Yes,cv,success,1.98,4,,5-Fold CV,
+4,SNR,No,Yes,cv,success,1.9,4,,10-Fold CV,
+4,SNR,No,Yes,loocv,success,2.04,4,,LOOCV,
+4,SNR,No,No,split,success,2.2,4,,70/30 Split,
+4,SNR,No,No,split,success,1.71,4,,80/20 Split,
+4,SNR,No,No,cv,success,1.59,4,,5-Fold CV,
+4,SNR,No,No,cv,success,1.52,4,,10-Fold CV,
+4,SNR,No,No,loocv,success,2.16,4,,LOOCV,
+4,SCAD,Yes,Yes,split,success,3.84,4,,70/30 Split,SCAD uses regularization-based selection (balance N/A)
+4,SCAD,Yes,Yes,split,success,4.31,4,,80/20 Split,SCAD uses regularization-based selection (balance N/A)
+4,SCAD,Yes,Yes,cv,success,4.06,4,,5-Fold CV,SCAD uses regularization-based selection (balance N/A)
+4,SCAD,Yes,Yes,cv,success,3.72,4,,10-Fold CV,SCAD uses regularization-based selection (balance N/A)
+4,SCAD,Yes,Yes,loocv,success,4.22,4,,LOOCV,SCAD uses regularization-based selection (balance N/A)
+4,SCAD,Yes,No,split,success,3.6,4,,70/30 Split,SCAD uses regularization-based selection (balance N/A)
+4,SCAD,Yes,No,split,success,4.6,4,,80/20 Split,SCAD uses regularization-based selection (balance N/A)
+4,SCAD,Yes,No,cv,success,3.92,4,,5-Fold CV,SCAD uses regularization-based selection (balance N/A)
+4,SCAD,Yes,No,cv,success,3.46,4,,10-Fold CV,SCAD uses regularization-based selection (balance N/A)
+4,SCAD,Yes,No,loocv,success,4.14,4,,LOOCV,SCAD uses regularization-based selection (balance N/A)
+4,SCAD,No,Yes,split,success,3.45,4,,70/30 Split,SCAD uses regularization-based selection (balance N/A)
+4,SCAD,No,Yes,split,success,4.15,4,,80/20 Split,SCAD uses regularization-based selection (balance N/A)
+4,SCAD,No,Yes,cv,success,3.5,4,,5-Fold CV,SCAD uses regularization-based selection (balance N/A)
+4,SCAD,No,Yes,cv,success,3.92,4,,10-Fold CV,SCAD uses regularization-based selection (balance N/A)
+4,SCAD,No,Yes,loocv,success,4.26,4,,LOOCV,SCAD uses regularization-based selection (balance N/A)
+4,SCAD,No,No,split,success,3.44,4,,70/30 Split,SCAD uses regularization-based selection (balance N/A)
+4,SCAD,No,No,split,success,4.01,4,,80/20 Split,SCAD uses regularization-based selection (balance N/A)
+4,SCAD,No,No,cv,success,3.4,4,,5-Fold CV,SCAD uses regularization-based selection (balance N/A)
+4,SCAD,No,No,cv,success,4.08,4,,10-Fold CV,SCAD uses regularization-based selection (balance N/A)
+4,SCAD,No,No,loocv,success,3.95,4,,LOOCV,SCAD uses regularization-based selection (balance N/A)
+8,ANOVA,Yes,Yes,split,success,0.21,8,,70/30 Split,
+8,ANOVA,Yes,Yes,split,success,0.27,8,,80/20 Split,
+8,ANOVA,Yes,Yes,cv,success,0.27,8,,5-Fold CV,
+8,ANOVA,Yes,Yes,cv,success,0.35,8,,10-Fold CV,
+8,ANOVA,Yes,Yes,loocv,success,0.38,8,,LOOCV,
+8,ANOVA,Yes,No,split,success,0.25,8,,70/30 Split,
+8,ANOVA,Yes,No,split,success,0.27,8,,80/20 Split,
+8,ANOVA,Yes,No,cv,success,0.25,8,,5-Fold CV,
+8,ANOVA,Yes,No,cv,success,0.31,8,,10-Fold CV,
+8,ANOVA,Yes,No,loocv,success,0.47,8,,LOOCV,
+8,ANOVA,No,Yes,split,success,0.25,8,,70/30 Split,
+8,ANOVA,No,Yes,split,success,0.27,8,,80/20 Split,
+8,ANOVA,No,Yes,cv,success,0.31,8,,5-Fold CV,
+8,ANOVA,No,Yes,cv,success,0.29,8,,10-Fold CV,
+8,ANOVA,No,Yes,loocv,success,0.37,8,,LOOCV,
+8,ANOVA,No,No,split,success,0.28,8,,70/30 Split,
+8,ANOVA,No,No,split,success,0.27,8,,80/20 Split,
+8,ANOVA,No,No,cv,success,0.25,8,,5-Fold CV,
+8,ANOVA,No,No,cv,success,0.59,8,,10-Fold CV,
+8,ANOVA,No,No,loocv,success,0.64,8,,LOOCV,
+8,SNR,Yes,Yes,split,success,1.7,8,,70/30 Split,
+8,SNR,Yes,Yes,split,success,1.34,8,,80/20 Split,
+8,SNR,Yes,Yes,cv,success,1.52,8,,5-Fold CV,
+8,SNR,Yes,Yes,cv,success,1.83,8,,10-Fold CV,
+8,SNR,Yes,Yes,loocv,success,1.59,8,,LOOCV,
+8,SNR,Yes,No,split,success,1.38,8,,70/30 Split,
+8,SNR,Yes,No,split,success,1.52,8,,80/20 Split,
+8,SNR,Yes,No,cv,success,1.77,8,,5-Fold CV,
+8,SNR,Yes,No,cv,success,1.97,8,,10-Fold CV,
+8,SNR,Yes,No,loocv,success,1.87,8,,LOOCV,
+8,SNR,No,Yes,split,success,1.63,8,,70/30 Split,
+8,SNR,No,Yes,split,success,2.13,8,,80/20 Split,
+8,SNR,No,Yes,cv,success,1.86,8,,5-Fold CV,
+8,SNR,No,Yes,cv,success,1.48,8,,10-Fold CV,
+8,SNR,No,Yes,loocv,success,1.61,8,,LOOCV,
+8,SNR,No,No,split,success,1.48,8,,70/30 Split,
+8,SNR,No,No,split,success,1.91,8,,80/20 Split,
+8,SNR,No,No,cv,success,1.54,8,,5-Fold CV,
+8,SNR,No,No,cv,success,1.54,8,,10-Fold CV,
+8,SNR,No,No,loocv,success,1.64,8,,LOOCV,
+8,SCAD,Yes,Yes,split,success,4.95,8,,70/30 Split,SCAD uses regularization-based selection (balance N/A)
+8,SCAD,Yes,Yes,split,success,12429.96,8,,80/20 Split,SCAD uses regularization-based selection (balance N/A)
+8,SCAD,Yes,Yes,cv,success,3.72,8,,5-Fold CV,SCAD uses regularization-based selection (balance N/A)
+8,SCAD,Yes,Yes,cv,success,5.56,8,,10-Fold CV,SCAD uses regularization-based selection (balance N/A)
+8,SCAD,Yes,Yes,loocv,success,7.88,8,,LOOCV,SCAD uses regularization-based selection (balance N/A)
+8,SCAD,Yes,No,split,success,4.95,8,,70/30 Split,SCAD uses regularization-based selection (balance N/A)
+8,SCAD,Yes,No,split,success,3.98,8,,80/20 Split,SCAD uses regularization-based selection (balance N/A)
+8,SCAD,Yes,No,cv,success,3.1,8,,5-Fold CV,SCAD uses regularization-based selection (balance N/A)
+8,SCAD,Yes,No,cv,success,3.45,8,,10-Fold CV,SCAD uses regularization-based selection (balance N/A)
+8,SCAD,Yes,No,loocv,success,3.28,8,,LOOCV,SCAD uses regularization-based selection (balance N/A)
+8,SCAD,No,Yes,split,success,3.24,8,,70/30 Split,SCAD uses regularization-based selection (balance N/A)
+8,SCAD,No,Yes,split,success,2.93,8,,80/20 Split,SCAD uses regularization-based selection (balance N/A)
+8,SCAD,No,Yes,cv,success,2.93,8,,5-Fold CV,SCAD uses regularization-based selection (balance N/A)
+8,SCAD,No,Yes,cv,success,2.32,8,,10-Fold CV,SCAD uses regularization-based selection (balance N/A)
+8,SCAD,No,Yes,loocv,success,2.45,8,,LOOCV,SCAD uses regularization-based selection (balance N/A)
+8,SCAD,No,No,split,success,2.33,8,,70/30 Split,SCAD uses regularization-based selection (balance N/A)
+8,SCAD,No,No,split,success,2.85,8,,80/20 Split,SCAD uses regularization-based selection (balance N/A)
+8,SCAD,No,No,cv,success,2.52,8,,5-Fold CV,SCAD uses regularization-based selection (balance N/A)
+8,SCAD,No,No,cv,success,2.37,8,,10-Fold CV,SCAD uses regularization-based selection (balance N/A)
+8,SCAD,No,No,loocv,success,2.52,8,,LOOCV,SCAD uses regularization-based selection (balance N/A)
+16,ANOVA,Yes,Yes,split,success,0.16,16,,70/30 Split,
+16,ANOVA,Yes,Yes,split,success,0.16,16,,80/20 Split,
+16,ANOVA,Yes,Yes,cv,success,0.16,16,,5-Fold CV,
+16,ANOVA,Yes,Yes,cv,success,0.17,16,,10-Fold CV,
+16,ANOVA,Yes,Yes,loocv,success,0.26,16,,LOOCV,
+16,ANOVA,Yes,No,split,success,0.13,16,,70/30 Split,
+16,ANOVA,Yes,No,split,success,0.17,16,,80/20 Split,
+16,ANOVA,Yes,No,cv,success,0.17,16,,5-Fold CV,
+16,ANOVA,Yes,No,cv,success,0.21,16,,10-Fold CV,
+16,ANOVA,Yes,No,loocv,success,0.31,16,,LOOCV,
+16,ANOVA,No,Yes,split,success,0.16,16,,70/30 Split,
+16,ANOVA,No,Yes,split,success,0.3,16,,80/20 Split,
+16,ANOVA,No,Yes,cv,success,0.29,16,,5-Fold CV,
+16,ANOVA,No,Yes,cv,success,0.23,16,,10-Fold CV,
+16,ANOVA,No,Yes,loocv,success,0.31,16,,LOOCV,
+16,ANOVA,No,No,split,success,0.17,16,,70/30 Split,
+16,ANOVA,No,No,split,success,0.16,16,,80/20 Split,
+16,ANOVA,No,No,cv,success,0.21,16,,5-Fold CV,
+16,ANOVA,No,No,cv,success,0.2,16,,10-Fold CV,
+16,ANOVA,No,No,loocv,success,0.31,16,,LOOCV,
+16,SNR,Yes,Yes,split,success,0.89,16,,70/30 Split,
+16,SNR,Yes,Yes,split,success,0.99,16,,80/20 Split,
+16,SNR,Yes,Yes,cv,success,1.14,16,,5-Fold CV,
+16,SNR,Yes,Yes,cv,success,1.05,16,,10-Fold CV,
+16,SNR,Yes,Yes,loocv,success,1.11,16,,LOOCV,
+16,SNR,Yes,No,split,success,0.95,16,,70/30 Split,
+16,SNR,Yes,No,split,success,1.04,16,,80/20 Split,
+16,SNR,Yes,No,cv,success,1.01,16,,5-Fold CV,
+16,SNR,Yes,No,cv,success,0.87,16,,10-Fold CV,
+16,SNR,Yes,No,loocv,success,0.98,16,,LOOCV,
+16,SNR,No,Yes,split,success,1.03,16,,70/30 Split,
+16,SNR,No,Yes,split,success,0.98,16,,80/20 Split,
+16,SNR,No,Yes,cv,success,0.91,16,,5-Fold CV,
+16,SNR,No,Yes,cv,success,0.96,16,,10-Fold CV,
+16,SNR,No,Yes,loocv,success,1.02,16,,LOOCV,
+16,SNR,No,No,split,success,0.87,16,,70/30 Split,
+16,SNR,No,No,split,success,0.88,16,,80/20 Split,
+16,SNR,No,No,cv,success,0.86,16,,5-Fold CV,
+16,SNR,No,No,cv,success,1.02,16,,10-Fold CV,
+16,SNR,No,No,loocv,success,1.07,16,,LOOCV,
+16,SCAD,Yes,Yes,split,success,2.2,16,,70/30 Split,SCAD uses regularization-based selection (balance N/A)
+16,SCAD,Yes,Yes,split,success,2.98,16,,80/20 Split,SCAD uses regularization-based selection (balance N/A)
+16,SCAD,Yes,Yes,cv,success,3.09,16,,5-Fold CV,SCAD uses regularization-based selection (balance N/A)
+16,SCAD,Yes,Yes,cv,success,2.66,16,,10-Fold CV,SCAD uses regularization-based selection (balance N/A)
+16,SCAD,Yes,Yes,loocv,success,2.73,16,,LOOCV,SCAD uses regularization-based selection (balance N/A)
+16,SCAD,Yes,No,split,success,2.41,16,,70/30 Split,SCAD uses regularization-based selection (balance N/A)
+16,SCAD,Yes,No,split,success,2.29,16,,80/20 Split,SCAD uses regularization-based selection (balance N/A)
+16,SCAD,Yes,No,cv,success,2.56,16,,5-Fold CV,SCAD uses regularization-based selection (balance N/A)
+16,SCAD,Yes,No,cv,success,2.7,16,,10-Fold CV,SCAD uses regularization-based selection (balance N/A)
+16,SCAD,Yes,No,loocv,success,2.3,16,,LOOCV,SCAD uses regularization-based selection (balance N/A)
+16,SCAD,No,Yes,split,success,2.49,16,,70/30 Split,SCAD uses regularization-based selection (balance N/A)
+16,SCAD,No,Yes,split,success,2.2,16,,80/20 Split,SCAD uses regularization-based selection (balance N/A)
+16,SCAD,No,Yes,cv,success,2.59,16,,5-Fold CV,SCAD uses regularization-based selection (balance N/A)
+16,SCAD,No,Yes,cv,success,2.44,16,,10-Fold CV,SCAD uses regularization-based selection (balance N/A)
+16,SCAD,No,Yes,loocv,success,2.48,16,,LOOCV,SCAD uses regularization-based selection (balance N/A)
+16,SCAD,No,No,split,success,2.47,16,,70/30 Split,SCAD uses regularization-based selection (balance N/A)
+16,SCAD,No,No,split,success,2.32,16,,80/20 Split,SCAD uses regularization-based selection (balance N/A)
+16,SCAD,No,No,cv,success,2.53,16,,5-Fold CV,SCAD uses regularization-based selection (balance N/A)
+16,SCAD,No,No,cv,success,2.36,16,,10-Fold CV,SCAD uses regularization-based selection (balance N/A)
+16,SCAD,No,No,loocv,success,2.33,16,,LOOCV,SCAD uses regularization-based selection (balance N/A)
+24,ANOVA,Yes,Yes,split,success,0.16,24,,70/30 Split,
+24,ANOVA,Yes,Yes,split,success,0.18,24,,80/20 Split,
+24,ANOVA,Yes,Yes,cv,success,0.16,24,,5-Fold CV,
+24,ANOVA,Yes,Yes,cv,success,0.18,24,,10-Fold CV,
+24,ANOVA,Yes,Yes,loocv,success,0.25,24,,LOOCV,
+24,ANOVA,Yes,No,split,success,0.17,24,,70/30 Split,
+24,ANOVA,Yes,No,split,success,0.17,24,,80/20 Split,
+24,ANOVA,Yes,No,cv,success,0.19,24,,5-Fold CV,
+24,ANOVA,Yes,No,cv,success,0.35,24,,10-Fold CV,
+24,ANOVA,Yes,No,loocv,success,0.35,24,,LOOCV,
+24,ANOVA,No,Yes,split,success,0.18,24,,70/30 Split,
+24,ANOVA,No,Yes,split,success,0.16,24,,80/20 Split,
+24,ANOVA,No,Yes,cv,success,0.16,24,,5-Fold CV,
+24,ANOVA,No,Yes,cv,success,0.2,24,,10-Fold CV,
+24,ANOVA,No,Yes,loocv,success,0.26,24,,LOOCV,
+24,ANOVA,No,No,split,success,0.15,24,,70/30 Split,
+24,ANOVA,No,No,split,success,0.15,24,,80/20 Split,
+24,ANOVA,No,No,cv,success,0.19,24,,5-Fold CV,
+24,ANOVA,No,No,cv,success,0.2,24,,10-Fold CV,
+24,ANOVA,No,No,loocv,success,0.27,24,,LOOCV,
+24,SNR,Yes,Yes,split,success,0.92,24,,70/30 Split,
+24,SNR,Yes,Yes,split,success,1.06,24,,80/20 Split,
+24,SNR,Yes,Yes,cv,success,1.01,24,,5-Fold CV,
+24,SNR,Yes,Yes,cv,success,0.86,24,,10-Fold CV,
+24,SNR,Yes,Yes,loocv,success,0.95,24,,LOOCV,
+24,SNR,Yes,No,split,success,1.09,24,,70/30 Split,
+24,SNR,Yes,No,split,success,1.05,24,,80/20 Split,
+24,SNR,Yes,No,cv,success,0.99,24,,5-Fold CV,
+24,SNR,Yes,No,cv,success,0.87,24,,10-Fold CV,
+24,SNR,Yes,No,loocv,success,0.95,24,,LOOCV,
+24,SNR,No,Yes,split,success,1.06,24,,70/30 Split,
+24,SNR,No,Yes,split,success,0.93,24,,80/20 Split,
+24,SNR,No,Yes,cv,success,0.83,24,,5-Fold CV,
+24,SNR,No,Yes,cv,success,0.87,24,,10-Fold CV,
+24,SNR,No,Yes,loocv,success,1.16,24,,LOOCV,
+24,SNR,No,No,split,success,0.87,24,,70/30 Split,
+24,SNR,No,No,split,success,0.87,24,,80/20 Split,
+24,SNR,No,No,cv,success,0.82,24,,5-Fold CV,
+24,SNR,No,No,cv,success,1.1,24,,10-Fold CV,
+24,SNR,No,No,loocv,success,1.05,24,,LOOCV,
+24,SCAD,Yes,Yes,split,success,2.15,24,,70/30 Split,SCAD uses regularization-based selection (balance N/A)
+24,SCAD,Yes,Yes,split,success,2.37,24,,80/20 Split,SCAD uses regularization-based selection (balance N/A)
+24,SCAD,Yes,Yes,cv,success,2.43,24,,5-Fold CV,SCAD uses regularization-based selection (balance N/A)
+24,SCAD,Yes,Yes,cv,success,2.22,24,,10-Fold CV,SCAD uses regularization-based selection (balance N/A)
+24,SCAD,Yes,Yes,loocv,success,2.46,24,,LOOCV,SCAD uses regularization-based selection (balance N/A)
+24,SCAD,Yes,No,split,success,2.13,24,,70/30 Split,SCAD uses regularization-based selection (balance N/A)
+24,SCAD,Yes,No,split,success,2.44,24,,80/20 Split,SCAD uses regularization-based selection (balance N/A)
+24,SCAD,Yes,No,cv,success,2.4,24,,5-Fold CV,SCAD uses regularization-based selection (balance N/A)
+24,SCAD,Yes,No,cv,success,2.2,24,,10-Fold CV,SCAD uses regularization-based selection (balance N/A)
+24,SCAD,Yes,No,loocv,success,2.47,24,,LOOCV,SCAD uses regularization-based selection (balance N/A)
+24,SCAD,No,Yes,split,success,2.11,24,,70/30 Split,SCAD uses regularization-based selection (balance N/A)
+24,SCAD,No,Yes,split,success,2.43,24,,80/20 Split,SCAD uses regularization-based selection (balance N/A)
+24,SCAD,No,Yes,cv,success,2.37,24,,5-Fold CV,SCAD uses regularization-based selection (balance N/A)
+24,SCAD,No,Yes,cv,success,2.21,24,,10-Fold CV,SCAD uses regularization-based selection (balance N/A)
+24,SCAD,No,Yes,loocv,success,2.38,24,,LOOCV,SCAD uses regularization-based selection (balance N/A)
+24,SCAD,No,No,split,success,2.17,24,,70/30 Split,SCAD uses regularization-based selection (balance N/A)
+24,SCAD,No,No,split,success,2.48,24,,80/20 Split,SCAD uses regularization-based selection (balance N/A)
+24,SCAD,No,No,cv,success,2.27,24,,5-Fold CV,SCAD uses regularization-based selection (balance N/A)
+24,SCAD,No,No,cv,success,2.25,24,,10-Fold CV,SCAD uses regularization-based selection (balance N/A)
+24,SCAD,No,No,loocv,success,2.31,24,,LOOCV,SCAD uses regularization-based selection (balance N/A)
+32,ANOVA,Yes,Yes,split,success,0.18,32,,70/30 Split,
+32,ANOVA,Yes,Yes,split,success,0.19,32,,80/20 Split,
+32,ANOVA,Yes,Yes,cv,success,0.17,32,,5-Fold CV,
+32,ANOVA,Yes,Yes,cv,success,0.2,32,,10-Fold CV,
+32,ANOVA,Yes,Yes,loocv,success,0.38,32,,LOOCV,
+32,ANOVA,Yes,No,split,success,0.15,32,,70/30 Split,
+32,ANOVA,Yes,No,split,success,0.14,32,,80/20 Split,
+32,ANOVA,Yes,No,cv,success,0.17,32,,5-Fold CV,
+32,ANOVA,Yes,No,cv,success,0.21,32,,10-Fold CV,
+32,ANOVA,Yes,No,loocv,success,0.26,32,,LOOCV,
+32,ANOVA,No,Yes,split,success,0.16,32,,70/30 Split,
+32,ANOVA,No,Yes,split,success,0.17,32,,80/20 Split,
+32,ANOVA,No,Yes,cv,success,0.18,32,,5-Fold CV,
+32,ANOVA,No,Yes,cv,success,0.17,32,,10-Fold CV,
+32,ANOVA,No,Yes,loocv,success,0.26,32,,LOOCV,
+32,ANOVA,No,No,split,success,0.28,32,,70/30 Split,
+32,ANOVA,No,No,split,success,0.23,32,,80/20 Split,
+32,ANOVA,No,No,cv,success,0.18,32,,5-Fold CV,
+32,ANOVA,No,No,cv,success,0.18,32,,10-Fold CV,
+32,ANOVA,No,No,loocv,success,0.3,32,,LOOCV,
+32,SNR,Yes,Yes,split,success,0.93,32,,70/30 Split,
+32,SNR,Yes,Yes,split,success,0.86,32,,80/20 Split,
+32,SNR,Yes,Yes,cv,success,0.89,32,,5-Fold CV,
+32,SNR,Yes,Yes,cv,success,1.2,32,,10-Fold CV,
+32,SNR,Yes,Yes,loocv,success,0.98,32,,LOOCV,
+32,SNR,Yes,No,split,success,0.85,32,,70/30 Split,
+32,SNR,Yes,No,split,success,0.82,32,,80/20 Split,
+32,SNR,Yes,No,cv,success,1.05,32,,5-Fold CV,
+32,SNR,Yes,No,cv,success,0.93,32,,10-Fold CV,
+32,SNR,Yes,No,loocv,success,0.98,32,,LOOCV,
+32,SNR,No,Yes,split,success,0.77,32,,70/30 Split,
+32,SNR,No,Yes,split,success,1.06,32,,80/20 Split,
+32,SNR,No,Yes,cv,success,1.01,32,,5-Fold CV,
+32,SNR,No,Yes,cv,success,0.85,32,,10-Fold CV,
+32,SNR,No,Yes,loocv,success,0.87,32,,LOOCV,
+32,SNR,No,No,split,success,0.97,32,,70/30 Split,
+32,SNR,No,No,split,success,0.93,32,,80/20 Split,
+32,SNR,No,No,cv,success,0.94,32,,5-Fold CV,
+32,SNR,No,No,cv,success,0.88,32,,10-Fold CV,
+32,SNR,No,No,loocv,success,1.12,32,,LOOCV,
+32,SCAD,Yes,Yes,split,success,2.23,32,,70/30 Split,SCAD uses regularization-based selection (balance N/A)
+32,SCAD,Yes,Yes,split,success,2.37,32,,80/20 Split,SCAD uses regularization-based selection (balance N/A)
+32,SCAD,Yes,Yes,cv,success,2.17,32,,5-Fold CV,SCAD uses regularization-based selection (balance N/A)
+32,SCAD,Yes,Yes,cv,success,2.78,32,,10-Fold CV,SCAD uses regularization-based selection (balance N/A)
+32,SCAD,Yes,Yes,loocv,success,2.35,32,,LOOCV,SCAD uses regularization-based selection (balance N/A)
+32,SCAD,Yes,No,split,success,2.4,32,,70/30 Split,SCAD uses regularization-based selection (balance N/A)
+32,SCAD,Yes,No,split,success,2.4,32,,80/20 Split,SCAD uses regularization-based selection (balance N/A)
+32,SCAD,Yes,No,cv,success,2.61,32,,5-Fold CV,SCAD uses regularization-based selection (balance N/A)
+32,SCAD,Yes,No,cv,success,4.48,32,,10-Fold CV,SCAD uses regularization-based selection (balance N/A)
+32,SCAD,Yes,No,loocv,success,3.73,32,,LOOCV,SCAD uses regularization-based selection (balance N/A)
+32,SCAD,No,Yes,split,success,2.31,32,,70/30 Split,SCAD uses regularization-based selection (balance N/A)
+32,SCAD,No,Yes,split,success,2.72,32,,80/20 Split,SCAD uses regularization-based selection (balance N/A)
+32,SCAD,No,Yes,cv,success,2.7,32,,5-Fold CV,SCAD uses regularization-based selection (balance N/A)
+32,SCAD,No,Yes,cv,success,2.85,32,,10-Fold CV,SCAD uses regularization-based selection (balance N/A)
+32,SCAD,No,Yes,loocv,success,3.38,32,,LOOCV,SCAD uses regularization-based selection (balance N/A)
+32,SCAD,No,No,split,success,3.13,32,,70/30 Split,SCAD uses regularization-based selection (balance N/A)
+32,SCAD,No,No,split,success,3.55,32,,80/20 Split,SCAD uses regularization-based selection (balance N/A)
+32,SCAD,No,No,cv,success,3.39,32,,5-Fold CV,SCAD uses regularization-based selection (balance N/A)
+32,SCAD,No,No,cv,success,2.71,32,,10-Fold CV,SCAD uses regularization-based selection (balance N/A)
+32,SCAD,No,No,loocv,success,3.06,32,,LOOCV,SCAD uses regularization-based selection (balance N/A)
+50,ANOVA,Yes,Yes,split,success,0.19,50,,70/30 Split,
+50,ANOVA,Yes,Yes,split,success,0.19,50,,80/20 Split,
+50,ANOVA,Yes,Yes,cv,success,0.27,50,,5-Fold CV,
+50,ANOVA,Yes,Yes,cv,success,0.22,50,,10-Fold CV,
+50,ANOVA,Yes,Yes,loocv,success,0.32,50,,LOOCV,
+50,ANOVA,Yes,No,split,success,0.21,50,,70/30 Split,
+50,ANOVA,Yes,No,split,success,0.2,50,,80/20 Split,
+50,ANOVA,Yes,No,cv,success,0.22,50,,5-Fold CV,
+50,ANOVA,Yes,No,cv,success,0.23,50,,10-Fold CV,
+50,ANOVA,Yes,No,loocv,success,0.36,50,,LOOCV,
+50,ANOVA,No,Yes,split,success,0.32,50,,70/30 Split,
+50,ANOVA,No,Yes,split,success,0.32,50,,80/20 Split,
+50,ANOVA,No,Yes,cv,success,0.2,50,,5-Fold CV,
+50,ANOVA,No,Yes,cv,success,0.25,50,,10-Fold CV,
+50,ANOVA,No,Yes,loocv,success,0.28,50,,LOOCV,
+50,ANOVA,No,No,split,success,0.2,50,,70/30 Split,
+50,ANOVA,No,No,split,success,0.19,50,,80/20 Split,
+50,ANOVA,No,No,cv,success,0.2,50,,5-Fold CV,
+50,ANOVA,No,No,cv,success,0.23,50,,10-Fold CV,
+50,ANOVA,No,No,loocv,success,0.36,50,,LOOCV,
+50,SNR,Yes,Yes,split,success,1.09,50,,70/30 Split,
+50,SNR,Yes,Yes,split,success,0.94,50,,80/20 Split,
+50,SNR,Yes,Yes,cv,success,1.28,50,,5-Fold CV,
+50,SNR,Yes,Yes,cv,success,1.04,50,,10-Fold CV,
+50,SNR,Yes,Yes,loocv,success,1.03,50,,LOOCV,
+50,SNR,Yes,No,split,success,1.01,50,,70/30 Split,
+50,SNR,Yes,No,split,success,1.18,50,,80/20 Split,
+50,SNR,Yes,No,cv,success,1.14,50,,5-Fold CV,
+50,SNR,Yes,No,cv,success,1.04,50,,10-Fold CV,
+50,SNR,Yes,No,loocv,success,1.17,50,,LOOCV,
+50,SNR,No,Yes,split,success,1.13,50,,70/30 Split,
+50,SNR,No,Yes,split,success,1.4,50,,80/20 Split,
+50,SNR,No,Yes,cv,success,1.22,50,,5-Fold CV,
+50,SNR,No,Yes,cv,success,1.17,50,,10-Fold CV,
+50,SNR,No,Yes,loocv,success,1.16,50,,LOOCV,
+50,SNR,No,No,split,success,1.19,50,,70/30 Split,
+50,SNR,No,No,split,success,1.12,50,,80/20 Split,
+50,SNR,No,No,cv,success,0.98,50,,5-Fold CV,
+50,SNR,No,No,cv,success,1.02,50,,10-Fold CV,
+50,SNR,No,No,loocv,success,1.32,50,,LOOCV,
+50,SCAD,Yes,Yes,split,success,2.69,50,,70/30 Split,SCAD uses regularization-based selection (balance N/A)
+50,SCAD,Yes,Yes,split,success,2.74,50,,80/20 Split,SCAD uses regularization-based selection (balance N/A)
+50,SCAD,Yes,Yes,cv,success,2.51,50,,5-Fold CV,SCAD uses regularization-based selection (balance N/A)
+50,SCAD,Yes,Yes,cv,success,2.96,50,,10-Fold CV,SCAD uses regularization-based selection (balance N/A)
+50,SCAD,Yes,Yes,loocv,success,2.5,50,,LOOCV,SCAD uses regularization-based selection (balance N/A)
+50,SCAD,Yes,No,split,success,2.71,50,,70/30 Split,SCAD uses regularization-based selection (balance N/A)
+50,SCAD,Yes,No,split,success,2.99,50,,80/20 Split,SCAD uses regularization-based selection (balance N/A)
+50,SCAD,Yes,No,cv,success,2.58,50,,5-Fold CV,SCAD uses regularization-based selection (balance N/A)
+50,SCAD,Yes,No,cv,success,3.03,50,,10-Fold CV,SCAD uses regularization-based selection (balance N/A)
+50,SCAD,Yes,No,loocv,success,2.6,50,,LOOCV,SCAD uses regularization-based selection (balance N/A)
+50,SCAD,No,Yes,split,success,2.94,50,,70/30 Split,SCAD uses regularization-based selection (balance N/A)
+50,SCAD,No,Yes,split,success,2.82,50,,80/20 Split,SCAD uses regularization-based selection (balance N/A)
+50,SCAD,No,Yes,cv,success,2.47,50,,5-Fold CV,SCAD uses regularization-based selection (balance N/A)
+50,SCAD,No,Yes,cv,success,2.98,50,,10-Fold CV,SCAD uses regularization-based selection (balance N/A)
+50,SCAD,No,Yes,loocv,success,2.53,50,,LOOCV,SCAD uses regularization-based selection (balance N/A)
+50,SCAD,No,No,split,success,2.98,50,,70/30 Split,SCAD uses regularization-based selection (balance N/A)
+50,SCAD,No,No,split,success,2.72,50,,80/20 Split,SCAD uses regularization-based selection (balance N/A)
+50,SCAD,No,No,cv,success,2.83,50,,5-Fold CV,SCAD uses regularization-based selection (balance N/A)
+50,SCAD,No,No,cv,success,3.03,50,,10-Fold CV,SCAD uses regularization-based selection (balance N/A)
+50,SCAD,No,No,loocv,success,2.85,50,,LOOCV,SCAD uses regularization-based selection (balance N/A)

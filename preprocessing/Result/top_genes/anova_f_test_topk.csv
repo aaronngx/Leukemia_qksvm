@@ -1,0 +1,40 @@
+rank,gene_id,vote_count,avg_rank,score
+1,Zyxin,5,2.8,62.35602547115369
+2,Leukotriene C4 synthase (LTC4S) gene,5,3.6,66.28170013112057
+3,FAH Fumarylacetoacetate,5,4.4,56.48307115462468
+4,LYN V-yes-1 Yamaguchi sarcoma viral related oncogene homolog,5,9.2,44.168454453800315
+5,LEPR Leptin receptor,5,9.2,"Gene Description
+LEPR Leptin receptor     0.298916
+LEPR Leptin receptor    45.141957
+dtype: float64"
+6,GB DEF = Homeodomain protein HoxA9 mRNA,5,13.4,37.81664068943604
+7,DF D component of complement (adipsin),5,15.4,36.16982545881962
+8,Liver mRNA for interferon-gamma inducing factor(IGIF),5,15.6,39.592207297648436
+9,INDUCED MYELOID LEUKEMIA CELL DIFFERENTIATION PROTEIN MCL1,5,17.4,35.563689783937214
+10,PRG1 Proteoglycan 1; secretory granule,5,17.8,39.515011556339324
+11,Phosphotyrosine independent ligand p62 for the Lck SH2 domain mRNA,5,18.4,35.702257473576616
+12,CD33 CD33 antigen (differentiation antigen),4,7.0,47.858616557631876
+13,INTERLEUKIN-8 PRECURSOR,4,15.75,40.534507767723106
+14,PEPTIDYL-PROLYL CIS-TRANS ISOMERASE; MITOCHONDRIAL PRECURSOR,4,16.25,33.98415436988242
+15,CST3 Cystatin C (amyloid angiopathy and cerebral hemorrhage),4,20.0,33.66252691345249
+16,ITGAX Integrin; alpha X (antigen CD11C (p150); alpha polypeptide),4,22.0,28.965542133004785
+17,LYZ Lysozyme,4,27.25,"Gene Description
+LYZ Lysozyme    11.398058
+LYZ Lysozyme    25.225428
+LYZ Lysozyme    27.582654
+dtype: float64"
+18,Epb72 gene exon 1,3,11.666666666666666,35.01393698789163
+19,CTSD Cathepsin D (lysosomal aspartyl protease),3,15.0,35.83084055965219
+20,ATP6C Vacuolar H+ ATPase proton channel subunit,3,15.333333333333334,42.5306848495292
+21,Thrombospondin-p50 gene extracted from Human thrombospondin-1 gene; partial cds,3,16.333333333333332,31.86660180573688
+22,Interleukin 8 (IL8) gene,3,18.0,36.38999195706426
+23,LGALS3 Lectin; galactoside-binding; soluble; 3 (galectin 3) (NOTE: redefinition of symbol),3,18.0,30.301990756260736
+24,FTL Ferritin; light polypeptide,2,13.0,41.17931522321739
+25,MAJOR HISTOCOMPATIBILITY COMPLEX ENHANCER-BINDING PROTEIN MAD3,2,13.5,77.4974771958806
+26,PPGB Protective protein for beta-galactosidase (galactosialidosis),2,15.5,32.590896902821235
+27,CD36 CD36 antigen (collagen type I receptor; thrombospondin receptor),2,16.0,32.111946742949726
+28,Azurocidin gene,2,20.5,29.837389623191356
+29,Lysophospholipase homolog (HU-K5) mRNA,2,22.5,27.699235686573537
+30,FTH1 Ferritin heavy chain,2,24.0,32.129527815488366
+31,ADM Adrenomedullin,2,24.0,30.728423605095976
+32,TRANSCRIPTION FACTOR RELB,2,26.0,31.46020930408835

@@ -1,0 +1,51 @@
+overall_rank,rank_within_class,gene_description,gene_accession,snr_score,favors_class
+1,1,FAH Fumarylacetoacetate,M55150_at,-1.4676411648891123,AML
+2,2,Leukotriene C4 synthase (LTC4S) gene,U50136_rna1_at,-1.4217083082738604,AML
+3,3,Zyxin,X95735_at,-1.4057703637253105,AML
+4,1,C-myb gene extracted from Human (c-myb) gene; complete primary cds; and five complete alternatively spliced cds,U22376_cds2_s_at,1.3393078806073437,ALL
+5,4,LYN V-yes-1 Yamaguchi sarcoma viral related oncogene homolog,M16038_at,-1.202917275737727,AML
+6,5,CD33 CD33 antigen (differentiation antigen),M23197_at,-1.1959743396637028,AML
+7,6,DF D component of complement (adipsin),M84526_at,-1.1910386094842111,AML
+8,7,GB DEF = Homeodomain protein HoxA9 mRNA,U82759_at,-1.1641602415073262,AML
+9,8,Liver mRNA for interferon-gamma inducing factor(IGIF),D49950_at,-1.1397895161208105,AML
+10,2,PROTEASOME IOTA CHAIN,X59417_at,1.1246367803969082,ALL
+11,9,CST3 Cystatin C (amyloid angiopathy and cerebral hemorrhage),M27891_at,-1.1091898032097356,AML
+12,10,PRG1 Proteoglycan 1; secretory granule,X17042_at,-1.1059750494006466,AML
+13,3,MB-1 gene,U05259_rna1_at,1.1031787333172172,ALL
+14,11,Thrombospondin-p50 gene extracted from Human thrombospondin-1 gene; partial cds,U12471_cds1_at,-1.0697309047963595,AML
+15,12,Phosphotyrosine independent ligand p62 for the Lck SH2 domain mRNA,U46751_at,-1.064078048697605,AML
+16,4,CCND3 Cyclin D3,M92287_at,1.0430557216363487,ALL
+17,13,INTERLEUKIN-8 PRECURSOR,Y00787_s_at,-1.040984651552847,AML
+18,14,INDUCED MYELOID LEUKEMIA CELL DIFFERENTIATION PROTEIN MCL1,L08246_at,-1.0347837396729944,AML
+19,5,RETINOBLASTOMA BINDING PROTEIN P48,X74262_at,1.0277175445747186,ALL
+20,15,PEPTIDYL-PROLYL CIS-TRANS ISOMERASE; MITOCHONDRIAL PRECURSOR,M80254_at,-1.0277108292779755,AML
+21,6,CRYZ Crystallin zeta (quinone reductase),L13278_at,1.0237361888579986,ALL
+22,16,ATP6C Vacuolar H+ ATPase proton channel subunit,M62762_at,-1.0228515638360287,AML
+23,7,MYL1 Myosin light chain (alkali),M31211_s_at,1.0227678434683594,ALL
+24,8,Thymopoietin beta mRNA,U09087_s_at,1.0142753689307085,ALL
+25,17,CDC25A Cell division cycle 25A,M81933_at,-1.008192759600639,AML
+26,18,Azurocidin gene,M96326_rna1_at,-1.0053719471737361,AML
+27,19,Interleukin 8 (IL8) gene,M28130_rna1_s_at,-1.0009166036762023,AML
+28,9,Transcriptional activator hSNF2b,U29175_at,0.9890978706965874,ALL
+29,20,CTSD Cathepsin D (lysosomal aspartyl protease),M63138_at,-0.9836280107767045,AML
+30,21,FTL Ferritin; light polypeptide,M11147_at,-0.9739521930710312,AML
+31,22,LGALS3 Lectin; galactoside-binding; soluble; 3 (galectin 3) (NOTE: redefinition of symbol),M57710_at,-0.9712892098046125,AML
+32,10,Cytoplasmic dynein light chain 1 (hdlc1) mRNA,U32944_at,0.9548748722813014,ALL
+33,23,ITGAX Integrin; alpha X (antigen CD11C (p150); alpha polypeptide),M81695_s_at,-0.9530658297719871,AML
+34,11,Inducible protein mRNA,L47738_at,0.9504079068370395,ALL
+35,12,CD19 CD19 antigen,M28170_at,0.9494711680166913,ALL
+36,24,Epb72 gene exon 1,X85116_rna1_s_at,-0.9461132442031711,AML
+37,13,TOP2B Topoisomerase (DNA) II beta (180kD),Z15115_at,0.9451997850190245,ALL
+38,14,CTPS CTP synthetase,X52142_at,0.933184038190233,ALL
+39,15,IRF2 Interferon regulatory factor 2,X15949_at,0.9307637715367992,ALL
+40,25,Catalase (EC 1.11.1.6) 5'flank and exon 1 mapping to chromosome 11; band p13 (and joined CDS),X04085_rna1_at,-0.9304988475325929,AML
+41,16,Clone 22 mRNA; alternative splice variant alpha-1,AF009426_at,0.9246248483889273,ALL
+42,26,Neuromedin B mRNA,M21551_rna1_at,-0.9242411016584665,AML
+43,27,MAJOR HISTOCOMPATIBILITY COMPLEX ENHANCER-BINDING PROTEIN MAD3,M69043_at,-0.9225093117247917,AML
+44,17,HKR-T1,S50223_at,0.9215711312403781,ALL
+45,28,Lysozyme gene (EC 3.2.1.17),X14008_rna1_f_at,-0.9149540975356606,AML
+46,18,ACADM Acyl-Coenzyme A dehydrogenase; C-4 to C-12 straight chain,M91432_at,0.9135207981108773,ALL
+47,29,PFC Properdin P factor; complement,M83652_s_at,-0.9114713019538888,AML
+48,30,HOX 2.2 gene extracted from Human Hox2.2 gene for a homeobox protein,X58431_rna2_s_at,-0.9034583622546195,AML
+49,19,MCM3 Minichromosome maintenance deficient (S. cerevisiae) 3,X62153_s_at,0.9029464504760121,ALL
+50,20,GTF2E2 General transcription factor TFIIE beta subunit; 34 kD,X63469_at,0.9015700151145646,ALL

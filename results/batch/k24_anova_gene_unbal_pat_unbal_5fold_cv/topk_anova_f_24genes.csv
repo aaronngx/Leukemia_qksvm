@@ -1,0 +1,25 @@
+rank,gene_accession,gene_description,f_score,favors_class
+1,U50136_rna1_at,Leukotriene C4 synthase (LTC4S) gene,78.67324065998321,AML
+2,X95735_at,Zyxin,75.16297623912182,AML
+3,M55150_at,FAH Fumarylacetoacetate,69.26685111638425,AML
+4,M16038_at,LYN V-yes-1 Yamaguchi sarcoma viral related oncogene homolog,54.77489659402939,AML
+5,Y12670_at,LEPR Leptin receptor,54.66892158945346,AML
+6,M23197_at,CD33 CD33 antigen (differentiation antigen),52.665101757155426,AML
+7,D49950_at,Liver mRNA for interferon-gamma inducing factor(IGIF),48.56058891802896,AML
+8,X17042_at,PRG1 Proteoglycan 1; secretory granule,46.13573111848128,AML
+9,U82759_at,GB DEF = Homeodomain protein HoxA9 mRNA,45.465061199508376,AML
+10,M84526_at,DF D component of complement (adipsin),44.49557589660357,AML
+11,L08246_at,INDUCED MYELOID LEUKEMIA CELL DIFFERENTIATION PROTEIN MCL1,41.6190878710725,AML
+12,Y00787_s_at,INTERLEUKIN-8 PRECURSOR,41.58334475273399,AML
+13,M80254_at,PEPTIDYL-PROLYL CIS-TRANS ISOMERASE; MITOCHONDRIAL PRECURSOR,41.14774422983326,AML
+14,U46751_at,Phosphotyrosine independent ligand p62 for the Lck SH2 domain mRNA,40.814668476110015,AML
+15,M27891_at,CST3 Cystatin C (amyloid angiopathy and cerebral hemorrhage),39.11046313885508,AML
+16,M62762_at,ATP6C Vacuolar H+ ATPase proton channel subunit,38.54474448860884,AML
+17,M63138_at,CTSD Cathepsin D (lysosomal aspartyl protease),36.71951744790182,AML
+18,M28130_rna1_s_at,Interleukin 8 (IL8) gene,36.43034950613659,AML
+19,M81695_s_at,ITGAX Integrin; alpha X (antigen CD11C (p150); alpha polypeptide),35.36295043252816,AML
+20,X85116_rna1_s_at,Epb72 gene exon 1,34.16392525707794,AML
+21,M57710_at,LGALS3 Lectin; galactoside-binding; soluble; 3 (galectin 3) (NOTE: redefinition of symbol),33.71842130679627,AML
+22,U12471_cds1_at,Thrombospondin-p50 gene extracted from Human thrombospondin-1 gene; partial cds,33.57349871953837,AML
+23,M19045_f_at,LYZ Lysozyme,33.24403381727114,AML
+24,M11147_at,FTL Ferritin; light polypeptide,33.111958662271846,AML

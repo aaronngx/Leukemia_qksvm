@@ -1,0 +1,4 @@
+method,time_seconds_cv,time_seconds_loocv,time_seconds_split,k_cv,k_loocv,k_split
+ANOVA,0.24,0.33,0.21,56,28,56
+SCAD,11.57,3.31,225.02,56,28,56
+SNR,1.16,1.23,1.15,56,28,56

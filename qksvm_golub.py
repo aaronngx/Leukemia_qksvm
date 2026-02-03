@@ -12,8 +12,8 @@ import joblib
 
 from qiskit import QuantumCircuit
 
-from angle_encoding import angle_encoding_circuit, AngleEncodingType
-from amplitude_encoding import amplitude_encoding_feature_map as amp_encoding_circuit
+from angle_encoding import angle_encoding_circuit
+from amplitude_encoding import amplitude_encoding_circuit as amp_encoding_circuit
 from backend_config import (
     BackendType,
     KernelMethod,
@@ -39,21 +39,20 @@ def scale_to_angle(X: np.ndarray):
 
 def load_processed(train_csv: str, test_csv: str | None = None):
     """
-    Load processed CSVs with auto-detection of label column.
-
-    Supports both 'label' and 'cancer' column names.
-    Converts labels: ALL → 0, AML → 1
+    Load processed CSVs in (features + 'label') format.
 
     Returns
     -------
     (X_train, y_train), (X_test, y_test)
     """
-    from data_loader import load_preprocessed_data
-
-    X_train, y_train = load_preprocessed_data(train_csv)
+    df_train = pd.read_csv(train_csv)
+    y_train = df_train["label"].values
+    X_train = df_train.drop(columns=["label"]).values
 
     if test_csv is not None:
-        X_test, y_test = load_preprocessed_data(test_csv)
+        df_test = pd.read_csv(test_csv)
+        y_test = df_test["label"].values
+        X_test = df_test.drop(columns=["label"]).values
     else:
         X_test, y_test = None, None
 
@@ -107,19 +106,14 @@ def build_kernel(
             if backend_type == BackendType.TENSOR_NETWORK:
                 print(f"[INFO] Max bond dimension: {max_bond_dimension}")
 
-    # Number of parameters may differ from qubits (e.g., amplitude encoding)
-    n_params = len(x_params)
-    
     for i, x in enumerate(XA):
         if verbose and (i % 5 == 0 or i == nA - 1):
             progress = ((i + 1) * nB) / total_elements * 100
             print(f"  Progress: {i+1}/{nA} rows ({progress:.1f}%)")
 
         for j, z in enumerate(XB):
-            # Bind all parameters (use min to handle edge cases)
-            n_to_bind = min(n_params, len(x))
-            bind_x = {x_params[k]: float(x[k]) for k in range(n_to_bind)}
-            bind_z = {x_params[k]: float(z[k]) for k in range(n_to_bind)}
+            bind_x = {x_params[k]: float(x[k]) for k in range(n_qubits)}
+            bind_z = {x_params[k]: float(z[k]) for k in range(n_qubits)}
 
             if kernel_method == KernelMethod.SWAP_TEST:
                 # Swap test needs separate circuits for |φ(x)> and |φ(z)>
@@ -161,16 +155,9 @@ def train_eval_qksvm(
     seed: int = 42,
     output_dir: str = "results_qksvm",
     encoding_type: str = EncodingType.ANGLE,
-    angle_encoding_type: AngleEncodingType = AngleEncodingType.SIMPLE_RY,
-    angle_reps: int = 2,
     kernel_method: KernelMethod = KernelMethod.STATEVECTOR,
     backend_type: BackendType = BackendType.STATEVECTOR,
     max_bond_dimension: int = 100,
-    # ENSGA optimization (optional)
-    use_ensga: bool = False,
-    ensga_pop_size: int = 30,
-    ensga_generations: int = 50,
-    C: float = 1.0,
 ):
     """
     Train and evaluate QKSVM with quantum kernel.
@@ -189,24 +176,12 @@ def train_eval_qksvm(
         Directory to save results.
     encoding_type : str
         "angle" or "amplitude" encoding.
-    angle_encoding_type : AngleEncodingType
-        For angle encoding: SIMPLE_RY, ZZ_FEATURE_MAP, or BPS_CIRCUIT.
-    angle_reps : int
-        Number of repetitions for ZZ/BPS circuits.
     kernel_method : KernelMethod
         STATEVECTOR, SWAP_TEST, or HADAMARD_TEST.
     backend_type : BackendType
         STATEVECTOR or TENSOR_NETWORK (for statevector kernel method).
     max_bond_dimension : int
         For TENSOR_NETWORK backend.
-    use_ensga : bool
-        If True, use ENSGA to optimize SVM parameters (C, gamma).
-    ensga_pop_size : int
-        ENSGA population size (if use_ensga=True).
-    ensga_generations : int
-        ENSGA generations (if use_ensga=True).
-    C : float
-        SVM regularization parameter (if use_ensga=False).
     """
     out_path = Path(output_dir)
     out_path.mkdir(parents=True, exist_ok=True)
@@ -244,15 +219,8 @@ def train_eval_qksvm(
     # Build feature map based on encoding type
     if encoding_type == EncodingType.AMPLITUDE:
         feature_map, x_params, _ = amp_encoding_circuit(n_features)
-    else:  # Angle encoding with selectable circuit type
-        feature_map, x_params = angle_encoding_circuit(
-            n_features,
-            encoding_type=angle_encoding_type,
-            reps=angle_reps,
-        )
-        print(f"Angle encoding type: {angle_encoding_type.value}")
-        if angle_encoding_type != AngleEncodingType.SIMPLE_RY:
-            print(f"Repetitions: {angle_reps}")
+    else:  # Default to angle encoding
+        feature_map, x_params = angle_encoding_circuit(n_features)
 
     # Save circuit visualization
     print("[INFO] Saving circuit diagram...")
@@ -276,26 +244,8 @@ def train_eval_qksvm(
         max_bond_dimension=max_bond_dimension,
     )
 
-    # Train SVM (with optional ENSGA optimization)
-    if use_ensga:
-        print("[INFO] Optimizing SVM parameters with ENSGA...")
-        from ensga_optimizer import train_qsvm_ndsgoa
-        
-        ensga_results = train_qsvm_ndsgoa(
-            K_train, y_train,
-            pop_size=ensga_pop_size,
-            n_generations=ensga_generations,
-            verbose=True,
-        )
-        clf = ensga_results['model'].svm
-        optimized_C = ensga_results['best_C']
-        optimized_gamma = ensga_results['best_gamma']
-        print(f"[INFO] ENSGA optimized: C={optimized_C:.4f}, gamma={optimized_gamma:.4f}")
-    else:
-        clf = SVC(kernel="precomputed", C=C)
-        clf.fit(K_train, y_train)
-        optimized_C = C
-        optimized_gamma = None
+    clf = SVC(kernel="precomputed", C=1.0)
+    clf.fit(K_train, y_train)
 
     # Save trained model
     print("[INFO] Saving trained model...")
@@ -307,9 +257,6 @@ def train_eval_qksvm(
         "backend_type": backend_type.value,
         "max_bond_dimension": max_bond_dimension,
         "n_features": n_features,
-        "optimized_C": optimized_C,
-        "optimized_gamma": optimized_gamma,
-        "use_ensga": use_ensga,
     }
     joblib.dump(model_data, out_path / f"qksvm_model_{timestamp}.pkl")
 
@@ -356,10 +303,6 @@ def train_eval_qksvm(
         results_text.append("Simulation type: Exact (Statevector)")
     results_text.append(f"Training samples: {len(X_train)}")
     results_text.append(f"Validation samples: {len(X_val)}")
-    results_text.append(f"\nOptimizer: {'ENSGA' if use_ensga else 'Default'}")
-    results_text.append(f"SVM C parameter: {optimized_C:.4f}")
-    if optimized_gamma is not None:
-        results_text.append(f"Kernel gamma: {optimized_gamma:.4f}")
     results_text.append("\n" + "=" * 60)
     results_text.append("VALIDATION SET RESULTS")
     results_text.append("=" * 60)
@@ -427,42 +370,22 @@ def run_qksvm_from_csv(
     ind_csv: str | None = "data/processed/independent_topk_snr.csv",
     output_dir: str = "results_qksvm",
     encoding_type: str = EncodingType.ANGLE,
-    angle_encoding_type: AngleEncodingType = AngleEncodingType.SIMPLE_RY,
-    angle_reps: int = 2,
     kernel_method: KernelMethod = KernelMethod.STATEVECTOR,
     backend_type: BackendType = BackendType.STATEVECTOR,
     max_bond_dimension: int = 100,
     test_size: float = 0.3,
     seed: int = 42,
-    # ENSGA parameters (optional)
-    use_ensga: bool = False,
-    ensga_pop_size: int = 30,
-    ensga_generations: int = 50,
-    C: float = 1.0,
 ):
     """
     Convenience wrapper: load CSVs and run QKSVM end-to-end.
 
     Usage (in a notebook):
-        from qksvm_golub import run_qksvm_from_csv, BackendType, KernelMethod, EncodingType, AngleEncodingType
-        
-        # Simple RY (default)
-        run_qksvm_from_csv(train_csv="results/train_top_16_anova_f.csv")
-        
-        # ZZ Feature Map with 2 reps
+        from qksvm_golub import run_qksvm_from_csv, BackendType, KernelMethod, EncodingType
         run_qksvm_from_csv(
             train_csv="results/train_top_16_anova_f.csv",
-            encoding_type=EncodingType.ANGLE,
-            angle_encoding_type=AngleEncodingType.ZZ_FEATURE_MAP,
-            angle_reps=2,
-        )
-        
-        # With ENSGA optimization
-        run_qksvm_from_csv(
-            train_csv="results/train_top_16_anova_f.csv",
-            use_ensga=True,
-            ensga_pop_size=30,
-            ensga_generations=50,
+            ind_csv="results/independent_top_16_anova_f.csv",
+            encoding_type=EncodingType.AMPLITUDE,
+            kernel_method=KernelMethod.SWAP_TEST,
         )
     """
     (X_train, y_train), (X_ind, y_ind) = load_processed(train_csv, ind_csv)
@@ -476,15 +399,9 @@ def run_qksvm_from_csv(
         seed=seed,
         output_dir=output_dir,
         encoding_type=encoding_type,
-        angle_encoding_type=angle_encoding_type,
-        angle_reps=angle_reps,
         kernel_method=kernel_method,
         backend_type=backend_type,
         max_bond_dimension=max_bond_dimension,
-        use_ensga=use_ensga,
-        ensga_pop_size=ensga_pop_size,
-        ensga_generations=ensga_generations,
-        C=C,
     )
 
 

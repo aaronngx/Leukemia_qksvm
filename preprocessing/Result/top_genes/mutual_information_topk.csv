@@ -1,0 +1,66 @@
+rank,gene_id,vote_count,avg_rank,score
+1,Zyxin,5,4.2,0.4992118683669683
+2,FAH Fumarylacetoacetate,5,8.0,0.46603467044730734
+3,Leukotriene C4 synthase (LTC4S) gene,5,14.0,0.45146271234469015
+4,CYSTATIN A,5,15.0,0.4237214043889111
+5,NUCLEOLYSIN TIA-1,5,16.6,0.43019648831880275
+6,PTX3 Pentaxin-related gene; rapidly induced by IL-1 beta,5,18.6,0.4269634549108227
+7,CDC25A Cell division cycle 25A,5,25.0,0.3946684116649394
+8,ELA2 Elastatse 2; neutrophil,5,26.2,0.4002475275499814
+9,CCND3 Cyclin D3,5,28.8,0.40652200151528356
+10,LEPR Leptin receptor,4,9.5,"Gene Description
+LEPR Leptin receptor    0.000000
+LEPR Leptin receptor    0.466336
+dtype: float64"
+11,APLP2 Amyloid beta (A4) precursor-like protein 2,4,13.0,0.4416988998949684
+12,TCF3 Transcription factor 3 (E2A immunoglobulin enhancer binding factors E12/E47),4,15.5,"Gene Description
+TCF3 Transcription factor 3 (E2A immunoglobulin enhancer binding factors E12/E47)    0.224118
+TCF3 Transcription factor 3 (E2A immunoglobulin enhancer binding factors E12/E47)    0.429105
+dtype: float64"
+13,CD33 CD33 antigen (differentiation antigen),4,19.0,0.41410860315238995
+14,Oncoprotein 18 (Op18) gene,4,20.5,0.40897383936149617
+15,RETINOBLASTOMA BINDING PROTEIN P48,4,24.0,0.3954397356720942
+16,Neuromedin B mRNA,4,25.0,0.41479028631356046
+17,C-myb gene extracted from Human (c-myb) gene; complete primary cds; and five complete alternatively spliced cds,4,28.5,0.3956866106994737
+18,PRKCD Protein kinase C; delta,3,6.0,0.4706985637786579
+19,ACADM Acyl-Coenzyme A dehydrogenase; C-4 to C-12 straight chain,3,14.0,0.4360126892844094
+20,PPBP Connective tissue activation peptide III,3,21.0,0.40650493578905517
+21,GLUTATHIONE S-TRANSFERASE; MICROSOMAL,3,23.666666666666668,0.4115548501036772
+22,Myeloid progenitor inhibitory factor-1 MPIF-1 mRNA,3,32.666666666666664,0.36303178675592934
+23,T-COMPLEX PROTEIN 1; GAMMA SUBUNIT,3,34.333333333333336,0.3591792875550807
+24,PROTEASOME IOTA CHAIN,3,35.333333333333336,0.36711106306750124
+25,ADM Adrenomedullin,3,39.666666666666664,0.37584452592381296
+26,Epb72 gene exon 1,3,41.666666666666664,0.3578765394929078
+27,CHRNA7 Cholinergic receptor; nicotinic; alpha polypeptide 7,2,4.5,0.4834478648445225
+28,GB DEF = Homeodomain protein HoxA9 mRNA,2,12.5,0.4274119114488868
+29,Uridine phosphorylase,2,13.5,0.44066830611201513
+30,PLECKSTRIN,2,15.5,0.4331519202323739
+31,Pre-B cell enhancing factor (PBEF) mRNA,2,16.5,0.41365641238678885
+32,CD36 CD36 antigen (collagen type I receptor; thrombospondin receptor),2,17.5,0.43506963931666476
+33,54 kDa protein mRNA,2,19.0,0.3909662053966694
+34,CST3 Cystatin C (amyloid angiopathy and cerebral hemorrhage),2,25.5,0.43688404702953476
+35,(AF1q) mRNA,2,25.5,0.3817758121144701
+36,Liver mRNA for interferon-gamma inducing factor(IGIF),2,27.0,0.3732360798569567
+37,ALKALINE PHOSPHATASE; INTESTINAL PRECURSOR,2,27.5,0.4180376069178485
+38,Transketolase-Like Protein,2,28.0,0.38140098136525125
+39,TCRA T cell receptor alpha-chain,2,28.5,"Gene Description
+TCRA T cell receptor alpha-chain    0.000000
+TCRA T cell receptor alpha-chain    0.396567
+dtype: float64"
+40,NADPH-flavin reductase,2,29.0,0.38887274672668926
+41,Phosphotyrosine independent ligand p62 for the Lck SH2 domain mRNA,2,31.0,0.38079695849416717
+42,GRN Granulin,2,31.5,0.37260614158794136
+43,LYN V-yes-1 Yamaguchi sarcoma viral related oncogene homolog,2,33.0,0.3966530253341505
+44,SNRPN Small nuclear ribonucleoprotein polypeptide N,2,33.5,0.3734359454538636
+45,Transcriptional activator hSNF2b,2,34.0,"Gene Description
+Transcriptional activator hSNF2b    0.327226
+Transcriptional activator hSNF2b    0.337828
+dtype: float64"
+46,Hepatocyte growth factor-like protein gene,2,37.5,0.3618329721050946
+47,Terminal transferase mRNA,2,42.0,0.3667460010912629
+48,RB1 Retinoblastoma 1 (including osteosarcoma),2,44.0,"Gene Description
+RB1 Retinoblastoma 1 (including osteosarcoma)    0.367032
+RB1 Retinoblastoma 1 (including osteosarcoma)    0.040308
+dtype: float64"
+49,GB DEF = Recombination acitivating protein (RAG2) gene; last exon,2,46.5,0.34869235320346215
+50,PFC Properdin P factor; complement,1,2.0,0.4947095247754125

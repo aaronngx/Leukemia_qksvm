@@ -1,0 +1,25 @@
+overall_rank,rank_within_class,gene_description,gene_accession,snr_score,favors_class
+1,1,FAH Fumarylacetoacetate,M55150_at,-1.4676411648891123,AML
+2,2,Leukotriene C4 synthase (LTC4S) gene,U50136_rna1_at,-1.4217083082738604,AML
+3,3,Zyxin,X95735_at,-1.4057703637253105,AML
+4,1,C-myb gene extracted from Human (c-myb) gene; complete primary cds; and five complete alternatively spliced cds,U22376_cds2_s_at,1.3393078806073437,ALL
+5,4,LYN V-yes-1 Yamaguchi sarcoma viral related oncogene homolog,M16038_at,-1.202917275737727,AML
+6,5,CD33 CD33 antigen (differentiation antigen),M23197_at,-1.1959743396637028,AML
+7,6,DF D component of complement (adipsin),M84526_at,-1.1910386094842111,AML
+8,7,GB DEF = Homeodomain protein HoxA9 mRNA,U82759_at,-1.1641602415073262,AML
+9,8,Liver mRNA for interferon-gamma inducing factor(IGIF),D49950_at,-1.1397895161208105,AML
+10,2,PROTEASOME IOTA CHAIN,X59417_at,1.1246367803969082,ALL
+11,9,CST3 Cystatin C (amyloid angiopathy and cerebral hemorrhage),M27891_at,-1.1091898032097356,AML
+12,10,PRG1 Proteoglycan 1; secretory granule,X17042_at,-1.1059750494006466,AML
+13,3,MB-1 gene,U05259_rna1_at,1.1031787333172172,ALL
+14,11,Thrombospondin-p50 gene extracted from Human thrombospondin-1 gene; partial cds,U12471_cds1_at,-1.0697309047963595,AML
+15,12,Phosphotyrosine independent ligand p62 for the Lck SH2 domain mRNA,U46751_at,-1.064078048697605,AML
+16,4,CCND3 Cyclin D3,M92287_at,1.0430557216363487,ALL
+17,5,RETINOBLASTOMA BINDING PROTEIN P48,X74262_at,1.0277175445747186,ALL
+18,6,CRYZ Crystallin zeta (quinone reductase),L13278_at,1.0237361888579986,ALL
+19,7,MYL1 Myosin light chain (alkali),M31211_s_at,1.0227678434683594,ALL
+20,8,Thymopoietin beta mRNA,U09087_s_at,1.0142753689307085,ALL
+21,9,Transcriptional activator hSNF2b,U29175_at,0.9890978706965874,ALL
+22,10,Cytoplasmic dynein light chain 1 (hdlc1) mRNA,U32944_at,0.9548748722813014,ALL
+23,11,Inducible protein mRNA,L47738_at,0.9504079068370395,ALL
+24,12,CD19 CD19 antigen,M28170_at,0.9494711680166913,ALL

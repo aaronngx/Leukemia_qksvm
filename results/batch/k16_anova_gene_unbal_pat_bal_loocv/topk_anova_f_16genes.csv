@@ -1,0 +1,17 @@
+rank,gene_accession,gene_description,f_score,favors_class
+1,M55150_at,FAH Fumarylacetoacetate,49.386945196095546,AML
+2,M92287_at,CCND3 Cyclin D3,47.2787064206462,ALL
+3,U22376_cds2_s_at,C-myb gene extracted from Human (c-myb) gene; complete primary cds; and five complete alternatively spliced cds,47.14079136964782,ALL
+4,X59417_at,PROTEASOME IOTA CHAIN,41.9744450257852,ALL
+5,X95735_at,Zyxin,35.905294806218095,AML
+6,U50136_rna1_at,Leukotriene C4 synthase (LTC4S) gene,34.81164381741411,AML
+7,AF009426_at,Clone 22 mRNA; alternative splice variant alpha-1,33.04596695223544,ALL
+8,U57094_at,Small GTP-binding protein mRNA,29.598235093061547,AML
+9,HG1612-HT1612_at,Macmarcks,29.163396957955822,ALL
+10,U59877_s_at,Low-Mr GTP-binding protein (RAB31) mRNA,28.888575293526326,AML
+11,M31211_s_at,MYL1 Myosin light chain (alkali),28.288137273862645,ALL
+12,M31303_rna1_at,Oncoprotein 18 (Op18) gene,28.191486367930576,ALL
+13,Z69881_at,Adenosine triphosphatase; calcium,28.092052521986624,ALL
+14,D87078_at,KIAA0235 gene; partial cds,27.981995698558382,ALL
+15,S50223_at,HKR-T1,27.16546839870854,ALL
+16,M31523_at,TCF3 Transcription factor 3 (E2A immunoglobulin enhancer binding factors E12/E47),26.746523434077844,ALL

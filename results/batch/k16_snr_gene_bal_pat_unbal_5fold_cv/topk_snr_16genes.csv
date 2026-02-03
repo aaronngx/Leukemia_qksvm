@@ -1,0 +1,17 @@
+overall_rank,rank_within_class,gene_description,gene_accession,snr_score,favors_class
+1,1,FAH Fumarylacetoacetate,M55150_at,-1.4676411648891123,AML
+2,2,Leukotriene C4 synthase (LTC4S) gene,U50136_rna1_at,-1.4217083082738604,AML
+3,3,Zyxin,X95735_at,-1.4057703637253105,AML
+4,1,C-myb gene extracted from Human (c-myb) gene; complete primary cds; and five complete alternatively spliced cds,U22376_cds2_s_at,1.3393078806073437,ALL
+5,4,LYN V-yes-1 Yamaguchi sarcoma viral related oncogene homolog,M16038_at,-1.202917275737727,AML
+6,5,CD33 CD33 antigen (differentiation antigen),M23197_at,-1.1959743396637028,AML
+7,6,DF D component of complement (adipsin),M84526_at,-1.1910386094842111,AML
+8,7,GB DEF = Homeodomain protein HoxA9 mRNA,U82759_at,-1.1641602415073262,AML
+9,8,Liver mRNA for interferon-gamma inducing factor(IGIF),D49950_at,-1.1397895161208105,AML
+10,2,PROTEASOME IOTA CHAIN,X59417_at,1.1246367803969082,ALL
+11,3,MB-1 gene,U05259_rna1_at,1.1031787333172172,ALL
+12,4,CCND3 Cyclin D3,M92287_at,1.0430557216363487,ALL
+13,5,RETINOBLASTOMA BINDING PROTEIN P48,X74262_at,1.0277175445747186,ALL
+14,6,CRYZ Crystallin zeta (quinone reductase),L13278_at,1.0237361888579986,ALL
+15,7,MYL1 Myosin light chain (alkali),M31211_s_at,1.0227678434683594,ALL
+16,8,Thymopoietin beta mRNA,U09087_s_at,1.0142753689307085,ALL

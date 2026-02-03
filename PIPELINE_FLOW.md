@@ -211,47 +211,31 @@ y_ind.shape    # (34,)    - 34 labels
 
 This is where classical data gets mapped to quantum states.
 
-### Path A: Amplitude Encoding (True State Preparation)
+### Path A: "Amplitude" Encoding (Actually Angle Encoding)
 
-**File:** `amplitude_encoding.py` + `data_preprocessing.py`
+**File:** `amplitude_encoding.py`
 
-#### 3A.1 Preprocessing Pipeline (CORRECT ORDER)
+#### 3A.1 Preprocessing
 ```python
-from data_preprocessing import preprocess_for_amplitude
+from amplitude_encoding import preprocess_and_normalize
 
-# Pipeline: Split → Feature Selection → Scaler → Clipping → Padding → AmplitudeEmbedding(normalize=True)
-data = preprocess_for_amplitude(X_train, y_train, X_val, y_val, X_test, y_test)
+X_train_norm, scaler = preprocess_and_normalize(X_train)
 
 # Inside the function:
-# Step 1: Scaler (fit on TRAIN only)
-scaler = StandardScaler()  # Z-score (Golub-style)
-X_train_scaled = scaler.fit_transform(X_train)
-X_val_scaled = scaler.transform(X_val)    # Use same scaler!
-X_test_scaled = scaler.transform(X_test)  # Use same scaler!
+# Step 1: Standardize (z-score normalization)
+scaler = StandardScaler()
+X_std = scaler.fit_transform(X_train)
+# Each feature: (x - mean) / std
 
-# Step 2: Clipping (±3 std for Z-score)
-clip_val = 3.0
-X_train_clipped = np.clip(X_train_scaled, -clip_val, clip_val)
-X_val_clipped = np.clip(X_val_scaled, -clip_val, clip_val)
-X_test_clipped = np.clip(X_test_scaled, -clip_val, clip_val)
+# Step 2: Clip to [-1, 1]
+X_clipped = np.clip(X_std / 1.0, -1, 1)
 
-# Step 3: Padding to 2^n (if needed)
-# 16 features → 4 qubits → 2^4=16 → no padding needed
-# If 12 features → 4 qubits → pad to 16
-
-# Step 4: NO L2 normalization here!
-# AmplitudeEmbedding(normalize=True) handles this internally
+# Step 3: L2 normalize each sample (row)
+X_norm = X_clipped / np.linalg.norm(X_clipped, axis=1, keepdims=True)
 
 # Result:
-X_train_prep.shape  # (15, 16)
-# Ready for AmplitudeEmbedding(normalize=True)
-```
-
-**CRITICAL:** L2 normalization is NOT done manually. Use:
-```python
-qml.AmplitudeEmbedding(features=x, wires=range(n), normalize=True)
-# OR in Qiskit:
-qc.initialize(x / np.linalg.norm(x), range(n_qubits))
+X_train_norm.shape  # (15, 16)
+# Each row is a unit vector: ||x|| = 1
 ```
 
 #### 3A.2 Build Feature Map Circuit
@@ -320,66 +304,45 @@ statevector.shape  # (16,) - 2^4 = 16 complex amplitudes
 # where |αᵢ|² represents probability
 ```
 
-### Path B: Angle Encoding (Simple RY, ZZ Feature Map, BPS)
+### Path B: Angle Encoding
 
-**File:** `angle_encoding.py` + `data_preprocessing.py`
+**File:** `angle_encoding.py`
 
-#### 3B.1 Preprocessing Pipeline (CORRECT ORDER)
 ```python
-from data_preprocessing import preprocess_for_angle
+from angle_encoding import angle_encoding_circuit
 
-# Pipeline: Split → Feature Selection → Scaler → Clipping → (Optional L2) → Angle Mapping
-data = preprocess_for_angle(X_train, y_train, X_val, y_val, X_test, y_test)
+circuit, x_params = angle_encoding_circuit(n_qubits=16)
 
-# Inside the function:
-# Step 1: Scaler (fit on TRAIN only)
-scaler = StandardScaler()  # Z-score
-X_train_scaled = scaler.fit_transform(X_train)
-X_val_scaled = scaler.transform(X_val)    # Use same scaler!
-X_test_scaled = scaler.transform(X_test)  # Use same scaler!
+# Build circuit
+qc = QuantumCircuit(16)  # Linear scaling: 16 features → 16 qubits
+x = ParameterVector("x", 16)
 
-# Step 2: Clipping (±3 std)
-clip_val = 3.0
-X_train_clipped = np.clip(X_train_scaled, -clip_val, clip_val)
-
-# Step 3: OPTIONAL L2 normalization (only if you want direction-only)
-# Usually SKIPPED for angle encoding
-# x_i → x_i / ||x_i||₂ per sample
-
-# Step 4: Map to angles [0, π]
-# angles = (π / clip_val) * X_clipped → approximately in [-π, π]
-# OR: normalize to [0,1] then multiply by π
-angle_min, angle_max = 0, np.pi
-X_angles = angle_min + (X_clipped + clip_val) / (2 * clip_val) * (angle_max - angle_min)
+# Apply one RY per qubit
+for i in range(16):
+    qc.ry(x[i], i)
 
 # Result:
-X_train_angles.shape  # (15, 16)
-# All values in range [0, π]
-```
-
-**NO PADDING needed for angle encoding!**
-
-#### 3B.2 Build Feature Map Circuit
-```python
-from angle_encoding import angle_encoding_circuit, AngleEncodingType
-
-# Option 1: Simple RY (non-entangled)
-circuit, x_params = angle_encoding_circuit(n_qubits=16, 
-    encoding_type=AngleEncodingType.SIMPLE_RY)
-
-# Option 2: ZZ Feature Map (fully-entangled)
-circuit, x_params = angle_encoding_circuit(n_qubits=16,
-    encoding_type=AngleEncodingType.ZZ_FEATURE_MAP)
-
-# Option 3: BPS Circuit (half-entangled)
-circuit, x_params = angle_encoding_circuit(n_qubits=16,
-    encoding_type=AngleEncodingType.BPS_CIRCUIT)
-
-# Linear scaling: 16 features → 16 qubits
 # q0:  RY(x[0])
 # q1:  RY(x[1])
+# q2:  RY(x[2])
 # ...
 # q15: RY(x[15])
+```
+
+**Preprocessing for angle encoding:**
+```python
+from qksvm_golub import scale_to_angle
+
+X_scaled, scaler = scale_to_angle(X_train)
+
+# Inside:
+scaler = MinMaxScaler(feature_range=(0, π))
+X_scaled = scaler.fit_transform(X_train)
+# Each feature: x_scaled = (x - min) / (max - min) * π
+
+# Result:
+X_scaled.shape  # (15, 16)
+# All values in range [0, π]
 ```
 
 ---
@@ -754,27 +717,11 @@ VQC:
 - This happens BEFORE quantum encoding
 - Only selected genes are encoded into quantum states
 
-### 2. Correct Preprocessing Chains
-
-**For AMPLITUDE Encoding:**
-```
-Split → Feature Selection → Scaler(fit train) → Clipping → Padding(if needed) → AmplitudeEmbedding(normalize=True)
-```
-- NO manual L2 normalization (handled by AmplitudeEmbedding)
-- Padding only if #features < 2^n
-
-**For ANGLE Encoding:**
-```
-Split → Feature Selection → Scaler(fit train) → Clipping → (Optional L2) → Angle Mapping → Feature Map
-```
-- NO padding needed (1 qubit per feature)
-- L2 optional (only for direction-only info)
-
-### 3. Quantum Advantage
+### 2. Quantum Advantage
 - **QKSVM:** Quantum kernel captures complex feature relationships
 - **VQC:** Variational circuit learns optimal parameters
 
-### 4. Data Flow is One-Way
+### 3. Data Flow is One-Way
 ```
 Preprocessing → Encoding → Training → Evaluation
      ↓              ↓           ↓          ↓
@@ -782,9 +729,8 @@ Preprocessing → Encoding → Training → Evaluation
    (Python)   (Qiskit)     (Sklearn)   (Metrics)
 ```
 
-### 5. Critical: No Data Leakage
-- Feature selection on TRAIN only, apply same genes to val/test
-- Scaler fit ONLY on training data
+### 4. Critical: No Data Leakage
+- Training scaler fit ONLY on training data
 - Same scaler applied to test and independent sets
 - Independent set completely unseen during preprocessing
 
@@ -806,34 +752,27 @@ Preprocessing → Encoding → Training → Evaluation
 ## FILES INVOLVED AT EACH STEP
 
 ```
-STEP 1 (Feature Selection):
-├─ preprocessing.py (main workflow)
+STEP 1 (Preprocessing):
+├─ preprocessing.py (main)
 ├─ feature-selection-methods/anova_f.py
-├─ feature-selection-methods/signal_to_noise.py
-└─ feature-selection-methods/scad_svm.py (NEW)
+└─ feature-selection-methods/signal_to_noise.py
 
 STEP 2 (Data Loading):
 └─ data_loader.py
 
-STEP 3 (Data Preprocessing for Encoding):
-├─ data_preprocessing.py (NEW - unified preprocessing)
-│   ├─ preprocess_for_amplitude()
-│   └─ preprocess_for_angle()
-
-STEP 4 (Encoding - Feature Maps):
+STEP 3 (Encoding):
 ├─ amplitude_encoding.py
-├─ angle_encoding.py (Simple RY, ZZ, BPS)
-├─ ansatz.py (variational layers)
+├─ angle_encoding.py
 └─ backend_config.py
 
-STEP 5A (VQC):
-├─ vqc_golub.py (angle encoding VQC)
-└─ amplitude_encoding.py (amplitude encoding VQC)
+STEP 4A (VQC):
+├─ amplitude_encoding.py (train_amplitude_vqc)
+└─ vqc_golub.py
 
-STEP 5B (QKSVM):
+STEP 4B (QKSVM):
 └─ qksvm_golub.py
 
-STEP 6 (Evaluation):
+STEP 5 (Evaluation):
 └─ sklearn.metrics (accuracy_score, classification_report)
 ```
 

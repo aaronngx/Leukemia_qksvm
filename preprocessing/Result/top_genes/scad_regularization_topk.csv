@@ -1,0 +1,12 @@
+rank,gene_id,vote_count,avg_rank,score
+1,CD33 CD33 antigen (differentiation antigen),3,3.0,0.14153756579395804
+2,LEPR Leptin receptor,3,3.0,"Gene Description
+LEPR Leptin receptor    0.000000
+LEPR Leptin receptor    0.147278
+dtype: float64"
+3,Leukotriene C4 synthase (LTC4S) gene,3,3.0,0.15363764129277055
+4,Epb72 gene exon 1,2,2.0,0.22736082364353274
+5,Zyxin,2,3.0,0.23873216580932063
+6,Hepatocyte growth factor-like protein gene,2,5.0,0.07165056323465063
+7,GB DEF = Homeodomain protein HoxA9 mRNA,2,5.5,0.07810767977640057
+8,RNA-binding protein CUG-BP/hNab50 (NAB50) mRNA,2,7.5,0.056162284788077166
